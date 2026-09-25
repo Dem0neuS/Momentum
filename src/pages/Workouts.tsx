@@ -1,0 +1,1 @@
+export { WorkoutsPage } from '@/modules/workouts/WorkoutsPage';

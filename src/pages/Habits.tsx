@@ -1,0 +1,1 @@
+export { HabitsPage } from '@/modules/habits/HabitsPage';

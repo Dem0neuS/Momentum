@@ -1,0 +1,1 @@
+export { DayPlanPage } from '@/modules/dayPlan/DayPlanPage';
