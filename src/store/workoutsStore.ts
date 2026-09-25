@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { db } from '@/db/db';
 import type { Exercise, TemplateExercise, Workout, WorkoutTemplate, WorkoutType } from '@/lib/types';
-import { dayKey, parseDayKey } from '@/lib/dates';
+import { dayKey, formatDayKeyShort, parseDayKey } from '@/lib/dates';
 import { nowIso, uid } from '@/lib/utils';
 import { toastSimple, toastWithUndo } from '@/lib/toast';
 
@@ -24,6 +24,8 @@ interface WorkoutsState {
   addWorkout: (input: WorkoutInput) => string;
   updateWorkout: (id: string, patch: Partial<Workout>) => void;
   deleteWorkout: (id: string) => void;
+  /** Убрать запланированную тренировку на день отдыха; действие можно отменить из тоста. */
+  cancelWorkout: (id: string) => void;
   toggleWorkout: (id: string) => void;
   duplicateWorkout: (id: string, date: string) => string;
 
@@ -31,8 +33,10 @@ interface WorkoutsState {
   updateExercise: (id: string, patch: Partial<Exercise>) => void;
   deleteExercise: (id: string) => void;
   reorderExercises: (workoutId: string, order: string[]) => void;
+  /** Атомарно заменяет список упражнений тренировки; используется при сохранении формы. */
+  replaceExercises: (workoutId: string, exercises: Exercise[]) => void;
 
-  saveTemplateFromWorkout: (workoutId: string, name?: string) => void;
+  saveTemplateFromWorkout: (workoutId: string, name?: string, exercisesOverride?: Exercise[]) => void;
   applyTemplate: (templateId: string, date: string) => string | null;
   deleteTemplate: (templateId: string) => void;
 
@@ -95,6 +99,49 @@ export const useWorkoutsStore = create<WorkoutsState>((set, get) => ({
     set({ exercises: s.exercises.filter((e) => e.workoutId !== id) });
     void db.workouts.delete(id);
     void db.exercises.bulkDelete(s.exercises.filter((e) => e.workoutId === id).map((e) => e.id));
+  },
+
+  cancelWorkout: (id) => {
+    const s = get();
+    const workoutIndex = s.workouts.findIndex((x) => x.id === id);
+    const workout = workoutIndex >= 0 ? s.workouts[workoutIndex] : undefined;
+    if (!workout) return;
+
+    const removedExercises = s.exercises.filter((e) => e.workoutId === id);
+    set({
+      workouts: s.workouts.filter((x) => x.id !== id),
+      exercises: s.exercises.filter((e) => e.workoutId !== id),
+    });
+    void db.transaction('rw', [db.workouts, db.exercises], async () => {
+      await db.workouts.delete(id);
+      if (removedExercises.length) {
+        await db.exercises.bulkDelete(removedExercises.map((e) => e.id));
+      }
+    });
+
+    toastWithUndo(
+      'Тренировка отменена',
+      () => {
+        const current = get();
+        // Не восстанавливаем запись, если пользователь уже успел изменить этот же id.
+        if (current.workouts.some((x) => x.id === workout.id)) return;
+        const existingExerciseIds = new Set(current.exercises.map((e) => e.id));
+        const exercisesToRestore = removedExercises.filter((e) => !existingExerciseIds.has(e.id));
+        const workouts = [...current.workouts];
+        workouts.splice(Math.min(workoutIndex, workouts.length), 0, workout);
+        set({
+          workouts,
+          exercises: [...current.exercises, ...exercisesToRestore],
+        });
+        void db.transaction('rw', [db.workouts, db.exercises], async () => {
+          await db.workouts.put(workout);
+          if (exercisesToRestore.length) {
+            await db.exercises.bulkPut(exercisesToRestore);
+          }
+        });
+      },
+      { description: `${formatDayKeyShort(workout.date)} · ${workout.name}` },
+    );
   },
 
   toggleWorkout: (id) => {
@@ -176,11 +223,23 @@ export const useWorkoutsStore = create<WorkoutsState>((set, get) => ({
     void db.exercises.bulkPut(next);
   },
 
-  saveTemplateFromWorkout: (workoutId, name) => {
+  replaceExercises: (workoutId, exercises) => {
+    const s = get();
+    const next = exercises.map((e, i) => ({ ...e, workoutId, order: i }));
+    const previous = s.exercises.filter((e) => e.workoutId === workoutId);
+    set({ exercises: [...s.exercises.filter((e) => e.workoutId !== workoutId), ...next] });
+    void db.transaction('rw', [db.exercises], async () => {
+      if (previous.length) await db.exercises.bulkDelete(previous.map((e) => e.id));
+      if (next.length) await db.exercises.bulkPut(next);
+    });
+  },
+
+  saveTemplateFromWorkout: (workoutId, name, exercisesOverride) => {
     const s = get();
     const w = s.workouts.find((x) => x.id === workoutId);
-    const exs = s.exercises
-      .filter((e) => e.workoutId === workoutId)
+    const sourceExercises = exercisesOverride ?? s.exercises.filter((e) => e.workoutId === workoutId);
+    const exs = sourceExercises
+      .slice()
       .sort((a, b) => a.order - b.order)
       .map((e, i): TemplateExercise => ({ name: e.name, sets: e.sets, reps: e.reps, weight: e.weight, note: e.note, order: i }));
     const tpl: WorkoutTemplate = { id: uid(), name: name?.trim() || w?.name || 'Шаблон', exercises: exs };

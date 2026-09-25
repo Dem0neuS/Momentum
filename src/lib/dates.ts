@@ -83,6 +83,12 @@ export function formatDayTitle(d: Date): string {
   return format(d, 'd MMMM yyyy', { locale: ru });
 }
 
+/** Короткая подпись дня по ключу: '25 сентября' */
+export function formatDayKeyShort(key: string): string {
+  const d = parseDayKey(key);
+  return isNaN(d.getTime()) ? key : format(d, 'd MMMM', { locale: ru });
+}
+
 export function formatWeekdayShort(d: Date): string {
   return format(d, 'EEE', { locale: ru });
 }

@@ -17,6 +17,11 @@ export interface CellSel {
   c: number;
 }
 
+export interface CellEdit extends CellSel {
+  value: string;
+  source: 'cell' | 'formula';
+}
+
 export function SheetGrid({
   sheet,
   sel,
@@ -27,25 +32,45 @@ export function SheetGrid({
   sheet: Sheet;
   sel: CellSel | null;
   setSel: (s: CellSel) => void;
-  editing: string | null;
-  setEditing: (v: string | null) => void;
+  editing: CellEdit | null;
+  setEditing: (v: CellEdit | null) => void;
 }) {
   const setCellValue = useSheetsStore((s) => s.setCellValue);
   const setColWidth = useSheetsStore((s) => s.setColWidth);
   const cells = useSheetsStore((s) => s.cells.filter((c) => c.sheetId === sheet.id));
   const evals = useSheetsStore((s) => s.evals[sheet.id]);
   const editRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const editingRef = useRef<CellEdit | null>(editing);
+  editingRef.current = editing;
+  const updateEditing = (next: CellEdit | null) => {
+    editingRef.current = next;
+    setEditing(next);
+  };
+  /** Закрыть редактирование с клавиатуры и вернуть фокус в сетку. */
+  const closeEditing = () => {
+    updateEditing(null);
+    gridRef.current?.focus();
+  };
 
   const rows = useMemo<GridRow[]>(
     () => Array.from({ length: Math.max(1, sheet.rowCount) }, (_, i) => ({ r: i })),
     [sheet.rowCount],
   );
 
-  const commit = (raw: string | null, r: number, c: number) => {
+  const commit = (raw: string | null, r: number, c: number, force = false) => {
+    const current = editingRef.current;
+    if (!force && (!current || current.r !== r || current.c !== c)) return;
     const value = raw ?? '';
     const prev = cells.find((x) => x.row === r && x.col === c)?.raw ?? '';
     if (value !== prev) setCellValue(sheet.id, r, c, value);
-    setEditing(null);
+    updateEditing(null);
+  };
+
+  /** Зафиксировать правку по клавиатуре и оставить фокус в сетке для следующих клавиш. */
+  const commitAndKeepFocus = (raw: string, r: number, c: number) => {
+    commit(raw, r, c);
+    gridRef.current?.focus();
   };
 
   const move = (dr: number, dc: number) => {
@@ -89,21 +114,29 @@ export function SheetGrid({
           const cell = cellAt(r, c);
           const val = evals?.values?.[r]?.[c];
           const isSelected = sel?.r === r && sel?.c === c;
-          const isEditing = isSelected && editing !== null;
+          const isEditing = editing?.source === 'cell' && editing.r === r && editing.c === c;
           const display = val === null || val === undefined ? '' : String(val);
           const style = cell?.style;
           const isFormula = cell?.raw?.trim().startsWith('=') ?? false;
 
           const startEdit = (initial?: string) => {
             setSel({ r, c });
-            setEditing(initial ?? cell?.raw ?? '');
+            updateEditing({ r, c, value: initial ?? cell?.raw ?? '', source: 'cell' });
           };
 
           return (
             <div
               tabIndex={-1}
+              role="gridcell"
+              aria-label={cellRef(r, c)}
+              aria-selected={isSelected}
               onMouseDown={(e) => {
                 e.stopPropagation();
+                // Перед переходом сначала закрываем редактирование старой ячейки.
+                // Иначе общее значение editing может мигрировать в новую ячейку.
+                if (editing && (editing.r !== r || editing.c !== c)) {
+                  commit(editing.value, editing.r, editing.c);
+                }
                 setSel({ r, c });
               }}
               onDoubleClick={() => startEdit()}
@@ -129,22 +162,26 @@ export function SheetGrid({
                 <input
                   ref={editRef}
                   autoFocus
-                  value={editing}
-                  onChange={(e) => setEditing(e.target.value)}
+                  value={editing?.value ?? ''}
+                  onChange={(e) => {
+                    if (editing) updateEditing({ ...editing, value: e.target.value });
+                  }}
                   onKeyDown={(e) => {
                     e.stopPropagation();
                     if (e.key === 'Enter') {
-                      commit(editing, r, c);
+                      commitAndKeepFocus(editing?.value ?? '', r, c);
                       move(1, 0);
                     } else if (e.key === 'Tab') {
                       e.preventDefault();
-                      commit(editing, r, c);
+                      commitAndKeepFocus(editing?.value ?? '', r, c);
                       move(0, e.shiftKey ? -1 : 1);
                     } else if (e.key === 'Escape') {
-                      setEditing(null);
+                      closeEditing();
                     }
                   }}
-                  onBlur={() => commit(editing, r, c)}
+                  onBlur={() => {
+                    if (editing) commit(editing.value, editing.r, editing.c);
+                  }}
                   className="absolute inset-0 h-full w-full bg-background px-1.5 text-[13px] outline-none ring-2 ring-primary"
                 />
               ) : (
@@ -197,7 +234,7 @@ export function SheetGrid({
       case 'Enter':
       case 'F2':
         e.preventDefault();
-        if (sel) setEditing(cellAt(sel.r, sel.c)?.raw ?? '');
+        if (sel) updateEditing({ r: sel.r, c: sel.c, value: cellAt(sel.r, sel.c)?.raw ?? '', source: 'cell' });
         break;
       case 'Tab':
         e.preventDefault();
@@ -206,12 +243,12 @@ export function SheetGrid({
       case 'Delete':
       case 'Backspace':
         e.preventDefault();
-        if (sel) commit('', sel.r, sel.c);
+        if (sel) commit('', sel.r, sel.c, true);
         break;
       default:
         if (e.key.length === 1) {
           e.preventDefault();
-          if (sel) setEditing(e.key);
+          if (sel) updateEditing({ r: sel.r, c: sel.c, value: e.key, source: 'cell' });
         }
     }
   };
@@ -230,24 +267,40 @@ export function SheetGrid({
   const selectedBadge = sel ? cellRef(sel.r, sel.c) : '';
 
   return (
-    <div tabIndex={0} onKeyDown={onGridKeyDown} className="outline-none">
+    <div
+      ref={gridRef}
+      tabIndex={0}
+      role="grid"
+      aria-label="Таблица"
+      aria-rowcount={sheet.rowCount}
+      aria-colcount={sheet.colCount}
+      onKeyDown={onGridKeyDown}
+      className="outline-none"
+    >
       {/* Формульная строка */}
       <div className="mb-2 flex items-center gap-1.5 rounded-xl border border-border/70 bg-background/60 px-2 py-1.5">
         <span className="w-14 shrink-0 text-center text-xs font-semibold text-muted-foreground">{selectedBadge}</span>
         <span className="shrink-0 text-muted-foreground/40">ƒx</span>
         <input
-          value={editing ?? (sel ? (cellAt(sel.r, sel.c)?.raw ?? '') : '')}
+          value={editing?.value ?? (sel ? (cellAt(sel.r, sel.c)?.raw ?? '') : '')}
           readOnly={editing === null && !sel}
           onFocus={() => {
-            if (sel) setEditing(cellAt(sel.r, sel.c)?.raw ?? '');
+            if (sel) {
+              updateEditing({ r: sel.r, c: sel.c, value: cellAt(sel.r, sel.c)?.raw ?? '', source: 'formula' });
+            }
           }}
-          onChange={(e) => setEditing(e.target.value)}
+          onChange={(e) => {
+            if (sel) updateEditing({ r: sel.r, c: sel.c, value: e.target.value, source: 'formula' });
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              if (sel) commit(editing, sel.r, sel.c);
+              if (editing) commitAndKeepFocus(editing.value, editing.r, editing.c);
             } else if (e.key === 'Escape') {
-              setEditing(null);
+              closeEditing();
             }
+          }}
+          onBlur={() => {
+            if (editing) commit(editing.value, editing.r, editing.c);
           }}
           placeholder="Значение или формула, напр. =SUM(A1:A5)"
           className="min-w-0 flex-1 bg-transparent px-1 text-[13px] outline-none placeholder:text-muted-foreground/50"

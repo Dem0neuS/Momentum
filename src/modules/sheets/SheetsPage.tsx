@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlignCenter,
   AlignLeft,
@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useSheetsStore } from '@/store/sheetsStore';
 import { SheetTabs } from './SheetTabs';
-import { SheetGrid, type CellSel } from './SheetGrid';
+import { SheetGrid, type CellEdit, type CellSel } from './SheetGrid';
 import { Popover } from '@/components/ui/popover';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,12 @@ export function SheetsPage() {
   const removeCol = useSheetsStore((s) => s.removeCol);
 
   const [sel, setSel] = useState<CellSel | null>(null);
-  const [editing, setEditing] = useState<string | null>(null);
+  const [editing, setEditing] = useState<CellEdit | null>(null);
+
+  useEffect(() => {
+    setSel(null);
+    setEditing(null);
+  }, [activeSheetId]);
 
   const sheet = sheets.find((s) => s.id === activeSheetId) ?? null;
   const selectedCell = sel && sheet ? useSheetsStore.getState().getCell(sheet.id, sel.r, sel.c) : null;

@@ -7,9 +7,11 @@ import { toastSimple } from '@/lib/toast';
 export function TemplatesDropdown({
   workoutId,
   onApplied,
+  onSaveTemplate,
 }: {
   workoutId?: string;
   onApplied?: (tpl: WorkoutTemplate) => void;
+  onSaveTemplate?: () => void;
 }) {
   const templates = useWorkoutsStore((s) => s.templates);
   const saveTemplateFromWorkout = useWorkoutsStore((s) => s.saveTemplateFromWorkout);
@@ -36,7 +38,7 @@ export function TemplatesDropdown({
               {
                 label: 'Сохранить как шаблон',
                 icon: <Save />,
-                onClick: () => saveTemplateFromWorkout(workoutId),
+                onClick: () => (onSaveTemplate ? onSaveTemplate() : saveTemplateFromWorkout(workoutId)),
               },
               ...(templates.length > 0 ? [{ separator: true }] : []),
             ]

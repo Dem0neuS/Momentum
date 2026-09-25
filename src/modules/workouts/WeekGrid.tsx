@@ -121,7 +121,7 @@ export function WeekGrid({
       )}
 
       {/* Сетка 7 дней */}
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-7 md:items-start">
+      <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-7 xl:items-start">
         {days.map(({ key, date }) => {
           const list = byDate.get(key) ?? [];
           const isToday = key === today;
@@ -129,7 +129,7 @@ export function WeekGrid({
             <div
               key={key}
               className={cn(
-                'flex min-h-[88px] flex-col gap-1.5 rounded-2xl border p-2 md:min-h-[220px]',
+                'flex min-h-[88px] flex-col gap-1.5 rounded-2xl border p-2 xl:min-h-[220px]',
                 isToday ? 'border-primary/40 bg-primary/[0.04]' : 'border-border/50 bg-card/60',
               )}
             >
@@ -149,14 +149,20 @@ export function WeekGrid({
 
               <div className="flex flex-1 flex-col gap-1.5">
                 {list.map((w) => (
-                  <WorkoutCard key={w.id} workout={w} onEdit={onEditWorkout} />
+                  <WorkoutCard
+                    key={w.id}
+                    workout={w}
+                    onEdit={onEditWorkout}
+                    onDuplicate={onDuplicate}
+                  />
                 ))}
                 {list.length === 0 && (
-                  <p className="hidden text-[11px] text-muted-foreground/60 md:block">Отдых — тоже прогресс</p>
+                  <p className="hidden text-[11px] text-muted-foreground/60 xl:block">Отдых — тоже прогресс</p>
                 )}
               </div>
 
               <button
+                type="button"
                 onClick={() => onAddWorkout(key)}
                 className="flex items-center justify-center gap-1 rounded-lg border border-dashed border-border/70 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
               >

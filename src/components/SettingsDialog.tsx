@@ -14,6 +14,7 @@ import { Switch } from '@/components/ui/switch';
 import { Field } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { useSettingsStore } from '@/store/settingsStore';
+import { useHistoryStore } from '@/store/historyStore';
 import { collectAllData, replaceAllData, clearAllData } from '@/db/db';
 import { downloadJson, readJsonFile } from '@/lib/utils';
 import { todayKey } from '@/lib/dates';
@@ -44,6 +45,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
         return;
       }
       await replaceAllData(data as never);
+      useHistoryStore.getState().clear();
       await reloadAll();
       toast('Данные импортированы');
     } catch (e) {
@@ -56,6 +58,7 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
 
   const resetData = async () => {
     await clearAllData();
+    useHistoryStore.getState().clear();
     await initApp();
     toast('Данные сброшены, созданы стартовые привычки');
   };

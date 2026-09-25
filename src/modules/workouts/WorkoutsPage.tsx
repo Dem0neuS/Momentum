@@ -9,6 +9,7 @@ import { WorkoutForm } from './WorkoutForm';
 export function WorkoutsPage() {
   const workouts = useWorkoutsStore((s) => s.workouts);
   const exercises = useWorkoutsStore((s) => s.exercises);
+  const duplicateWorkout = useWorkoutsStore((s) => s.duplicateWorkout);
 
   const [weekStart, setWeekStart] = useState(() => dayKey(startOfWeek(new Date())));
   const [formOpen, setFormOpen] = useState(false);
@@ -80,7 +81,8 @@ export function WorkoutsPage() {
           setFormOpen(true);
         }}
         onDuplicate={(w) => {
-          setEditing(null);
+          const id = duplicateWorkout(w.id, w.date);
+          setEditing(useWorkoutsStore.getState().workouts.find((x) => x.id === id) ?? null);
           setAddDate(w.date);
           setFormOpen(true);
         }}
@@ -94,9 +96,6 @@ export function WorkoutsPage() {
         }}
         workout={editing}
         defaultDate={addDate}
-        onWorkoutCreated={(id) => {
-          setEditing(useWorkoutsStore.getState().workouts.find((w) => w.id === id) ?? null);
-        }}
       />
     </div>
   );
