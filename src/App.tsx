@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 import { SplashScreen, SPLASH_DURATION } from '@/components/SplashScreen';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { useUpdateToast } from '@/components/UpdateAppCard';
 import { initApp } from '@/lib/boot';
 import { useHistoryStore } from '@/store/historyStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -107,6 +108,9 @@ export default function App() {
       else toast('Отменять нечего');
     }
   }, []);
+
+  // Тост «Обновление готово» с кнопкой «Обновить» (только десктопная версия).
+  useUpdateToast();
 
   const content = getSectionView(section, (s) => setSection(s));
 

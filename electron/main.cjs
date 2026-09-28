@@ -240,6 +240,14 @@ function buildMenu() {
             mainWindow.webContents.send('momentum:update-check-requested');
           },
         },
+        {
+          label: 'Перезапустить и обновить',
+          // Активен, только когда новая версия уже скачана.
+          enabled: updateState.phase === 'downloaded',
+          click: () => {
+            quitAndInstall();
+          },
+        },
         { type: 'separator' },
         {
           label: 'Папка данных',
@@ -264,8 +272,10 @@ function buildMenu() {
     {
       label: 'Вид',
       submenu: [
-        { role: 'reload', label: 'Обновить' },
-        { role: 'forceReload', label: 'Обновить без кэша' },
+        // Переименовано из «Обновить», чтобы не путать с обновлением программы
+        // из меню «Momentum» — здесь перезагружается только окно.
+        { role: 'reload', label: 'Перезагрузить окно' },
+        { role: 'forceReload', label: 'Перезагрузить без кэша' },
         { type: 'separator' },
         { role: 'resetZoom', label: 'Масштаб 100%' },
         { role: 'zoomIn', label: 'Увеличить' },
@@ -331,13 +341,17 @@ app.whenReady().then(async () => {
   buildMenu();
   createWindow();
 
-  // Тихо спрашиваем про обновление через несколько секунд после старта.
-  // Скачивание при этом не начинается — только по кнопке пользователя.
+  // Автообновление: первая проверка вскоре после старта, дальше по расписанию.
+  // Скачивание автоматическое, установка — при выходе или по кнопке «Обновить».
   if (!isDev) {
     setTimeout(() => {
       const updater = getAutoUpdater();
       if (updater) void updater.checkForUpdates().catch(() => {});
     }, 8000);
+    setInterval(() => {
+      const updater = getAutoUpdater();
+      if (updater) void updater.checkForUpdates().catch(() => {});
+    }, UPDATE_POLL_MS);
   }
 
   app.on('activate', () => {
@@ -362,18 +376,56 @@ ipcMain.on('momentum:full-screen', (_event, value) => {
 
 /* --- Автообновление -------------------------------------------------------
  *
- * electron-updater умеет проверять GitHub Releases и ставить NSIS-обновление
- * поверх текущей версии. Ничего не скачивается само: пользователь видит
- * предложение в настройках и нажимает кнопку сам.
+ * electron-updater проверяет GitHub Releases и ставит NSIS-обновление поверх
+ * текущей версии. Режим автоматический: новая версия сама скачивается в фоне,
+ * а устанавливается при закрытии программы. Кнопка «Обновить» в настройках и
+ * пункт в меню «Приложение» позволяют не ждать выхода.
  */
+
+/** Как часто перепроверять GitHub Releases, пока приложение открыто. */
+const UPDATE_POLL_MS = 6 * 60 * 60 * 1000;
 
 let autoUpdater;
 /** null — ещё не брали, false — недоступно (dev-режим или нет electron-updater). */
 let updaterError = null;
 
+/**
+ * Состояние обновления живёт в main, а не в окне: окно можно перезагрузить
+ * (Ctrl+R), и тогда события скачивания оно пропустит. Поэтому ответ на
+ * «проверить» всегда содержит и накопленное состояние.
+ */
+const updateState = { phase: 'idle', version: null, percent: 0, transferred: 0, total: 0 };
+
+/** Сравнение версий: includes() путал 1.0.10 с 1.0.1 и «прятал» обновление. */
+function compareVersions(a, b) {
+  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (diff !== 0) return diff > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
 function sendUpdateEvent(payload) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents.send('momentum:update-event', payload);
+}
+
+/** Запомнить состояние и сообщить окну одним и тем же объектом. */
+function setUpdateState(patch) {
+  Object.assign(updateState, patch);
+  sendUpdateEvent({ ...updateState });
+}
+
+/** Перезапуск с установкой уже скачанного обновления. */
+function quitAndInstall() {
+  const updater = getAutoUpdater();
+  if (!updater) return false;
+  setUpdateState({ phase: 'installing' });
+  // Данные лежат в userData и переживают замену файлов программы.
+  setImmediate(() => updater.quitAndInstall(false, true));
+  return true;
 }
 
 function getAutoUpdater() {
@@ -384,19 +436,21 @@ function getAutoUpdater() {
   }
   try {
     const { autoUpdater: updater } = require('electron-updater');
-    updater.autoDownload = false;
-    updater.autoInstallOnAppQuit = false;
+    // Автоматика: скачивание само, установка — при выходе из программы.
+    updater.autoDownload = true;
+    updater.autoInstallOnAppQuit = true;
     updater.logger = null;
     updater.on('error', (error) => {
       updaterError = error?.message ?? String(error);
-      sendUpdateEvent({ phase: 'error', message: updaterError });
+      setUpdateState({ phase: 'error', message: updaterError });
     });
+    updater.on('checking-for-update', () => setUpdateState({ phase: 'checking', message: null }));
     updater.on('update-available', (info) => {
-      sendUpdateEvent({ phase: 'available', version: info?.version ?? null });
+      setUpdateState({ phase: 'available', version: info?.version ?? null, message: null });
     });
-    updater.on('update-not-available', () => sendUpdateEvent({ phase: 'up-to-date' }));
+    updater.on('update-not-available', () => setUpdateState({ phase: 'up-to-date', version: null }));
     updater.on('download-progress', (progress) => {
-      sendUpdateEvent({
+      setUpdateState({
         phase: 'downloading',
         percent: Number(progress?.percent ?? 0),
         transferred: Number(progress?.transferred ?? 0),
@@ -404,7 +458,9 @@ function getAutoUpdater() {
       });
     });
     updater.on('update-downloaded', (info) => {
-      sendUpdateEvent({ phase: 'downloaded', version: info?.version ?? null });
+      setUpdateState({ phase: 'downloaded', version: info?.version ?? null, percent: 100 });
+      // В меню становится активным пункт «Перезапустить и обновить».
+      buildMenu();
     });
     autoUpdater = updater;
   } catch (error) {
@@ -420,37 +476,51 @@ ipcMain.handle('momentum:update-check', async () => {
     return { available: false, supported: false, message: updaterError ?? 'Обновление доступно только в установленной версии' };
   }
   try {
+    const current = app.getVersion();
     const result = await updater.checkForUpdates();
     const version = result?.updateInfo?.version ?? null;
     return {
-      available: Boolean(result && !result.updateInfo?.version?.includes(app.getVersion())),
+      available: Boolean(version) && compareVersions(version, current) > 0,
       supported: true,
       version,
-      currentVersion: app.getVersion(),
+      currentVersion: current,
+      // Окно могло перезагрузиться и пропустить события скачивания,
+      // поэтому отдаём и накопленное состояние.
+      phase: updateState.phase,
+      percent: updateState.percent,
+      transferred: updateState.transferred,
+      total: updateState.total,
     };
   } catch (error) {
     return { available: false, supported: true, message: error?.message ?? String(error) };
   }
 });
 
+ipcMain.handle('momentum:update-state', () => {
+  const updater = getAutoUpdater();
+  if (!updater) {
+    return { supported: false, message: updaterError ?? 'Обновление доступно только в установленной версии' };
+  }
+  // Без обращения к сети: окно перезагружается и должно увидеть текущее
+  // состояние, а main всё равно проверяет Releases по своему расписанию.
+  return { supported: true, currentVersion: app.getVersion(), ...updateState };
+});
+
 ipcMain.handle('momentum:update-download', async () => {
   const updater = getAutoUpdater();
   if (!updater) return { ok: false, message: 'Обновление недоступно' };
+  // Скачивание идёт автоматически, но если пользователь нажал кнопку —
+  // начинаем сразу, не дожидаясь проверки по расписанию.
+  if (updateState.phase === 'downloaded') return { ok: true };
   try {
-    await updater.downloadUpdate();
+    await updater.checkForUpdates();
     return { ok: true };
   } catch (error) {
     return { ok: false, message: error?.message ?? String(error) };
   }
 });
 
-ipcMain.handle('momentum:update-install', () => {
-  const updater = getAutoUpdater();
-  if (!updater) return { ok: false };
-  // Данные лежат в userData и переживают замену файлов программы.
-  setImmediate(() => updater.quitAndInstall(false, true));
-  return { ok: true };
-});
+ipcMain.handle('momentum:update-install', () => ({ ok: quitAndInstall() }));
 
 app.on('before-quit', () => {
   if (mainWindow) writeState(mainWindow);

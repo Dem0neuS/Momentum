@@ -565,6 +565,17 @@ function todayKey(): string {
   return dayKey(new Date());
 }
 
+/**
+ * Пока идёт явное действие пользователя, уведомление о разрыве серии не
+ * показывается: человек и так знает, что сам снял отметку. Без этого одно
+ * действие «снять отметку» порождало сразу два тоста — «Отметка снята» и
+ * поверх него «Серия прервалась», что выглядит спамом.
+ *
+ * Пассивные проверки (загрузка данных и смена дня) идут мимо applyLog,
+ * поэтому уведомление о серии, прерванной пропущенными днями, остаётся.
+ */
+let explicitEdit = false;
+
 function applyLog(log: HabitLog): void {
   if (log.status === 'none' && log.value === 0) {
     useHabitsStore.setState((s) => ({ logs: s.logs.filter((l) => l.id !== log.id) }));
@@ -573,7 +584,12 @@ function applyLog(log: HabitLog): void {
     useHabitsStore.setState((s) => ({ logs: upsertLog(s.logs, log) }));
     void db.habitLogs.put(log);
   }
-  useHabitsStore.getState().refreshStreakFor(log.habitId);
+  explicitEdit = true;
+  try {
+    useHabitsStore.getState().refreshStreakFor(log.habitId);
+  } finally {
+    explicitEdit = false;
+  }
 }
 
 function restoreLog(prev: HabitLog | null, habitId: ID, date: string): void {
@@ -590,6 +606,10 @@ function restoreLog(prev: HabitLog | null, habitId: ID, date: string): void {
 }
 
 function showInterruptedToast(habit: Habit): void {
+  // Разрыв серии из-за действия самого пользователя — молча уводим в toast
+  // уже есть, второй тост только путает. Habit при этом помечается как
+  // оповещённый у вызывающего кода, поэтому и позже мы не вернёмся к нему.
+  if (explicitEdit) return;
   const today = todayKey();
   const yesterday = dayKey(addDays(new Date(), -1));
   toastWithActions(`Серия «${habit.name}» прервалась — начнём заново?`, [

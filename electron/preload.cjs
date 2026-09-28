@@ -20,8 +20,13 @@ contextBridge.exposeInMainWorld('momentumDesktop', {
   openExternal: (url) => ipcRenderer.send('momentum:open-external', String(url)),
   /** Свернуть/развернуть окно — на случай, если понадобится полноэкранный режим. */
   setFullScreen: (value) => ipcRenderer.send('momentum:full-screen', Boolean(value)),
-  /** Проверить обновление: скачивание не начинается само. */
+  /** Проверить обновление: скачивание начинается само, сеть не блокирует UI. */
   checkUpdate: () => ipcRenderer.invoke('momentum:update-check'),
+  /**
+   * Накопленное состояние без обращения к сети. Нужно при открытии и перезагрузке
+   * окна: реальную проверку делает main по расписанию, а не каждая перерисовка.
+   */
+  getUpdateState: () => ipcRenderer.invoke('momentum:update-state'),
   /** Скачать обновление после согласия пользователя. */
   downloadUpdate: () => ipcRenderer.invoke('momentum:update-download'),
   /** Установить скачанное обновление и перезапустить приложение. */

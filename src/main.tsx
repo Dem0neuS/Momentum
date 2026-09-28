@@ -1,12 +1,11 @@
 import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Toaster } from 'sonner';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import './index.css';
-
-// Регистрация Service Worker (автообновление PWA)
-registerSW({ immediate: true });
+// Регистрация Service Worker (автообновление PWA). Модуль регистрирует воркер
+// при импорте и отдаёт функцию ручного обновления для настроек.
+import '@/lib/pwaUpdate';
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -1,65 +1,108 @@
 import { useEffect, useRef } from 'react';
-import { AlertTriangle, Check, Download, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAppUpdate } from '@/lib/useAppUpdate';
+import { usePwaUpdate } from '@/lib/usePwaUpdate';
+
+/** Мегабайты из байтов, которые electron-updater отдаёт в прогрессе. */
+function megabytes(bytes: number): string {
+  if (!bytes) return '';
+  return `${(bytes / 1024 / 1024).toFixed(1)} МБ`;
+}
 
 /**
- * Обновление десктопной версии.
+ * Обновление приложения.
  *
- * Ничего не скачивается само: сначала проверка по кнопке (или тихо при
- * старте), потом явное «Скачать», потом «Перезапустить и установить».
+ * Десктопная версия обновляется сама: main-процесс проверяет GitHub Releases,
+ * скачивает новую версию в фоне и ставит её при закрытии программы. Здесь
+ * видно, что происходит, и есть кнопка «Обновить», чтобы не ждать выхода.
  */
 export function UpdateAppCard() {
-  const { supported, phase, current, latest, percent, message, check, download, install } = useAppUpdate();
+  const desktop = useAppUpdate();
+  const pwa = usePwaUpdate();
+  const { supported, phase, current, latest, percent, transferred, total, message, check, install } =
+    desktop;
 
-  if (!supported) return null;
+  if (!supported) {
+    if (!pwa.supported) return null;
+    return (
+      <div className="space-y-3 rounded-xl border border-border/60 px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium">Обновление</p>
+            <p className="text-xs text-muted-foreground">
+              Новая версия подхватывается сама при следующем открытии
+            </p>
+          </div>
+          <Button size="sm" variant="outline" onClick={pwa.update} disabled={pwa.busy}>
+            <RefreshCw className={`h-4 w-4 ${pwa.busy ? 'animate-spin' : ''}`} />
+            {pwa.busy ? 'Обновляем…' : 'Обновить сейчас'}
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Данные хранятся на этом устройстве и переживают обновление.
+        </p>
+      </div>
+    );
+  }
 
-  const checking = phase === 'checking';
-  const downloading = phase === 'downloading';
-  const downloaded = phase === 'downloaded';
-  const available = phase === 'available';
+  const busy = phase === 'checking' || phase === 'installing';
+  const downloading = phase === 'downloading' || phase === 'available';
+  const ready = phase === 'downloaded';
+
+  const status = ready
+    ? `Версия ${latest ?? ''} готова к установке`
+    : phase === 'installing'
+      ? 'Перезапускаем и устанавливаем…'
+      : downloading
+        ? latest
+          ? `Скачиваем версию ${latest}…`
+          : 'Скачиваем обновление…'
+        : `Установлена версия ${current || '—'}`;
+
+  const size = total > 0 ? ` · ${megabytes(transferred)} из ${megabytes(total)}` : '';
 
   return (
     <div className="space-y-3 rounded-xl border border-border/60 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium">Обновление</p>
-          <p className="text-xs text-muted-foreground">
-            {downloaded
-              ? `Версия ${latest ?? ''} скачана`
-              : available
-                ? `Доступна версия ${latest ?? ''}`
-                : downloading
-                  ? 'Скачиваем обновление…'
-                  : `Установлена версия ${current || '—'}`}
-          </p>
+          <p className="text-xs text-muted-foreground">{status}</p>
         </div>
 
-        {downloaded ? (
+        {ready ? (
           <Button size="sm" onClick={install}>
             <RefreshCw className="h-4 w-4" />
-            Перезапустить и установить
-          </Button>
-        ) : available ? (
-          <Button size="sm" onClick={() => void download()}>
-            <Download className="h-4 w-4" />
-            Скачать обновление
+            Обновить
           </Button>
         ) : (
-          <Button size="sm" variant="outline" onClick={() => void check()} disabled={checking || downloading}>
-            <RefreshCw className={`h-4 w-4 ${checking ? 'animate-spin' : ''}`} />
-            {checking ? 'Проверяем…' : 'Проверить обновления'}
+          <Button
+            size="sm"
+            variant={downloading ? 'default' : 'outline'}
+            onClick={() => void check()}
+            disabled={busy || downloading}
+          >
+            <RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />
+            {busy ? 'Проверяем…' : 'Проверить обновления'}
           </Button>
         )}
       </div>
 
       {downloading && (
         <div className="space-y-1.5">
-          <Progress value={percent} aria-label="Прогресс скачивания обновления" />
-          <p className="text-xs text-muted-foreground">{Math.round(percent)}%</p>
+          <Progress value={percent} label="Скачивание обновления" />
+          <p className="text-xs text-muted-foreground">
+            {Math.round(percent)}%{size} · обновление установится при следующем закрытии программы
+          </p>
         </div>
+      )}
+
+      {ready && (
+        <p className="text-xs text-muted-foreground">
+          Можно нажать «Обновить» сейчас или закрыть программу — обновление встанет само.
+        </p>
       )}
 
       {phase === 'up-to-date' && (
@@ -85,18 +128,21 @@ export function UpdateAppCard() {
   );
 }
 
-/** Всплывающее уведомление, когда новая версия найдена сама, при старте. */
+/**
+ * Всплывающее уведомление, когда новая версия уже скачана.
+ * Раньше этот хук нигде не вызывался — тоста просто не было.
+ */
 export function useUpdateToast() {
-  const { phase, latest, check } = useAppUpdate();
-  const shownFor = useRef<string | null>(null);
+  const { phase, latest, install } = useAppUpdate();
+  const notifiedFor = useRef<string | null>(null);
 
   useEffect(() => {
-    if (phase !== 'available' || !latest || shownFor.current === latest) return;
-    shownFor.current = latest;
-    toast('Доступно обновление', {
-      description: `Версия ${latest}. Скачать можно в «Настройки → Приложение».`,
-      action: { label: 'Проверить', onClick: () => void check() },
-      duration: 8000,
+    if (phase !== 'downloaded' || !latest || notifiedFor.current === latest) return;
+    notifiedFor.current = latest;
+    toast('Обновление готово', {
+      description: `Версия ${latest} скачана. Можно обновиться сейчас или при следующем запуске.`,
+      action: { label: 'Обновить', onClick: install },
+      duration: 10000,
     });
-  }, [phase, latest, check]);
+  }, [phase, latest, install]);
 }
