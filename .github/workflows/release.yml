@@ -1,0 +1,67 @@
+name: Сборка и публикация
+
+# Публикация никогда не запускается сама: только вручную, кнопкой Run workflow.
+# Дополнительно нужен явный флажок publish — два действия, чтобы релиз ушёл.
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Опубликовать релиз в GitHub Releases
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Установить зависимости
+        run: npm ci
+
+      - name: Проверить типы и собрать фронтенд
+        run: npm run build
+
+      - name: Показать версию
+        run: node -e "console.log('версия:', require('./package.json').version)"
+
+      - name: Собрать установщик
+        # electron-builder дописывает в app-update.yml данные репозитория
+        # из секции build.publish — их читает electron-updater в приложении.
+        run: npx electron-builder --win --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Опубликовать релиз
+        if: ${{ inputs.publish }}
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Готово без публикации
+        if: ${{ !inputs.publish }}
+        run: echo "Сборка лежит в release/. Флажок publish не был установлен — релиз не создан."
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.publish }}
+        with:
+          name: Momentum-windows-x64
+          path: |
+            release/Momentum-*-setup.exe
+            release/Momentum-*-portable.exe
+          if-no-files-found: error
+          retention-days: 14
