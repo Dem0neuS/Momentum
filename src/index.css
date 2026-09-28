@@ -110,12 +110,35 @@
   }
 }
 
+/*
+ * Тосты sonner: текст и кнопки не должны драться за ширину.
+ *
+ * У тоста про прерванную серию сразу два действия («Отметить сегодня» и
+ * «Пропуск за вчера») — 243 px. При фиксированных 356 px sonner на текст
+ * оставалось 68 px, и заголовок рассыпался на семь строк.
+ * Теперь тост растёт по содержимому (max-width задаётся в main.tsx),
+ * а текст просит себе не меньше 12rem. Если кнопкам рядом места нет,
+ * перенос уводит их на следующую строку — обе вместе, а не по одной.
+ */
+[data-sonner-toast] {
+  flex-wrap: wrap;
+}
+
+[data-sonner-toast] [data-content] {
+  flex: 1 1 auto;
+  min-width: 12rem;
+}
+
+[data-sonner-toast] [data-action],
+[data-sonner-toast] [data-cancel] {
+  flex: 0 0 auto;
+}
+
 /* Тонкий скроллбар */
 *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 *::-webkit-scrollbar-track {
   background: transparent;
 }

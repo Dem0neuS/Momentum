@@ -137,6 +137,19 @@ export function SheetGrid({
                 if (editing && (editing.r !== r || editing.c !== c)) {
                   commit(editing.value, editing.r, editing.c);
                 }
+                // Второй клик мышью включает правку. Именно здесь, а не в
+                // onDoubleClick: смена выделения пересобирает колонки таблицы,
+                // React пересоздаёт узел ячейки, и браузер не собирает dblclick
+                // из кликов по разным элементам. detail === 2 приходит
+                // прямо на второй mousedown и работает всегда.
+                if (e.detail === 2) {
+                  // preventDefault обязателен: без него браузер после mousedown
+                  // переставит фокус на ближайшего фокусируемого предка, поле
+                  // ввода тут же получит blur, а его onBlur закроет правку.
+                  e.preventDefault();
+                  startEdit();
+                  return;
+                }
                 setSel({ r, c });
               }}
               onDoubleClick={() => startEdit()}

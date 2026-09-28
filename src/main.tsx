@@ -21,6 +21,10 @@ createRoot(document.getElementById('root')!).render(
           borderRadius: 'var(--r-lg)',
           boxShadow: 'var(--shadow-pop)',
           fontSize: 'var(--fs-caption)',
+          // Ширина по содержимому, а не фиксированные 356 px sonner:
+          // иначе тост с двумя кнопками сжимает текст до нечитаемой колонки.
+          width: 'auto',
+          maxWidth: 'min(480px, calc(100vw - 2rem))',
         },
       }}
     />
