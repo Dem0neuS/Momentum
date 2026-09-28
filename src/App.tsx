@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { MotionConfig, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
@@ -13,6 +13,7 @@ import { useHabitsStore } from '@/store/habitsStore';
 import { useDayPlanStore } from '@/store/dayPlanStore';
 import { useKeydown, useNow } from '@/lib/hooks';
 import { todayKey } from '@/lib/dates';
+import { rememberSection, sectionFromLocation } from '@/lib/deepLink';
 import type { SectionId } from '@/components/navigation';
 import { DashboardPage } from '@/pages/Dashboard';
 import { HabitsPage } from '@/pages/Habits';
@@ -29,7 +30,8 @@ function isEditableTarget(e: KeyboardEvent): boolean {
 }
 
 export default function App() {
-  const [section, setSection] = useState<SectionId>('dashboard');
+  // Ярлыки из манифеста (манифест → shortcuts) открывают нужный раздел сразу.
+  const [section, setSection] = useState<SectionId>(() => sectionFromLocation(window.location.search) ?? 'dashboard');
   const [splash, setSplash] = useState(true);
   const [ready, setReady] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -87,6 +89,14 @@ export default function App() {
     void now;
   }, [now, nowKey, ready, remindAt]);
 
+  // Раздел в адресной строке ↔ состояние навигации
+  useEffect(() => {
+    rememberSection(section);
+    const onPop = () => setSection(sectionFromLocation(window.location.search) ?? 'dashboard');
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [section]);
+
   // Ctrl/Cmd+Z — глобальный undo (кроме полей ввода)
   useKeydown((e) => {
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) {
@@ -101,32 +111,34 @@ export default function App() {
   const content = getSectionView(section, (s) => setSection(s));
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
-      <AnimatePresence>{splash && <SplashScreen />}</AnimatePresence>
+    <MotionConfig reducedMotion="user">
+      <div className="min-h-dvh bg-background text-foreground">
+        {splash && <SplashScreen />}
 
-      <Sidebar active={section} onNavigate={setSection} />
+        <Sidebar active={section} onNavigate={setSection} />
 
-      <div className="md:pl-60">
-        <Header section={section} onOpenSettings={() => setSettingsOpen(true)} />
-        <main className="mx-auto w-full max-w-5xl px-4 py-5">
-          {/* Без AnimatePresence/exit — мгновенная смена раздела, только входная
-              анимация. Так навигация не блокируется застрявшим exit-кадром
-              (актуально для мобильных PWA с частым сворачиванием вкладки). */}
-          <motion.div
-            key={section}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-          >
-            {content}
-          </motion.div>
-        </main>
+        <div className="md:pl-60">
+          <Header section={section} onOpenSettings={() => setSettingsOpen(true)} />
+          <main className="mx-auto w-full max-w-5xl px-4 py-5">
+            {/* Без AnimatePresence/exit — мгновенная смена раздела, только входная
+                анимация. Так навигация не блокируется застрявшим exit-кадром
+                (актуально для мобильных PWA с частым сворачиванием вкладки). */}
+            <motion.div
+              key={section}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              {content}
+            </motion.div>
+          </main>
+        </div>
+
+        <BottomNav active={section} onNavigate={setSection} />
+
+        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
-
-      <BottomNav active={section} onNavigate={setSection} />
-
-      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-    </div>
+    </MotionConfig>
   );
 }
 

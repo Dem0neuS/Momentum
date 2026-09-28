@@ -43,16 +43,17 @@ export function PlanItem({ item }: { item: DayPlanItem }) {
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 30 : undefined }}
       className={cn(
-        'group flex items-center gap-2 rounded-xl border border-border/50 bg-background/50 px-2.5 py-2 transition-colors',
-        isDragging && 'border-primary/50 shadow-soft-lg',
+        'group flex min-h-row items-center gap-2 rounded-md border border-border/60 bg-background/50 px-2.5 py-2 transition-colors',
+        isDragging && 'border-primary/50 shadow-pop',
         item.completed && 'bg-muted/40 opacity-75',
       )}
     >
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab touch-none rounded p-1 text-muted-foreground/40 transition-colors hover:text-foreground"
-        aria-label="Перетащить пункт"
+        data-drag-handle
+        className="flex h-11 w-11 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/40 transition-colors hover:text-foreground sm:h-8 sm:w-8"
+        aria-label={`Перетащить «${item.text || 'пункт плана'}»`}
       >
         <GripVertical className="h-4 w-4" />
       </button>
@@ -60,11 +61,11 @@ export function PlanItem({ item }: { item: DayPlanItem }) {
       <button
         onClick={() => toggleItem(item.id)}
         className={cn(
-          // визуально 20px, но область нажатия на тач-экранах расширена до ~40px
+          // Визуально 20 px, область нажатия на тач-экранах — 44 px.
           'relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all active:scale-90',
-          'before:absolute before:-inset-2.5 before:content-[""]',
+          'before:absolute before:-inset-3 before:content-[""]',
           item.completed
-            ? 'border-transparent bg-gradient-to-br from-violet-500 to-blue-500 text-white'
+            ? 'border-transparent bg-brand text-on-brand'
             : 'border-border/80 hover:border-primary/50',
         )}
         aria-label={item.completed ? 'Снять отметку' : 'Отметить выполненным'}
@@ -128,12 +129,12 @@ export function PlanItem({ item }: { item: DayPlanItem }) {
               </span>
             )}
             {linkedHabit && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-medium text-violet-500">
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand/10 px-1.5 py-0.5 text-[10px] font-medium text-primary-ink">
                 {linkedHabit.icon} привычка
               </span>
             )}
             {linkedWorkout && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-1.5 py-0.5 text-[10px] font-medium text-blue-500">
+              <span className="inline-flex items-center gap-1 rounded-full bg-cardio-soft px-1.5 py-0.5 text-[10px] font-medium text-cardio-ink">
                 🏋️ тренировка
               </span>
             )}
@@ -145,7 +146,7 @@ export function PlanItem({ item }: { item: DayPlanItem }) {
         align="end"
         trigger={
           <button
-            className="rounded-lg p-1.5 text-muted-foreground/50 opacity-70 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+            className="flex h-11 w-11 items-center justify-center rounded-md text-muted-foreground/50 opacity-70 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 sm:h-8 sm:w-8"
             aria-label="Действия с пунктом"
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -183,7 +184,8 @@ function LinkPopover({
     <Popover
       trigger={
         <button
-          className="rounded-lg p-1.5 text-muted-foreground/50 opacity-70 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+          type="button"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/50 opacity-70 transition-opacity hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 group-hover:opacity-100 sm:h-8 sm:w-8"
           title="Связать с привычкой или тренировкой"
           aria-label="Связать с привычкой или тренировкой"
         >
@@ -199,13 +201,14 @@ function LinkPopover({
             <div className="mb-2 flex flex-col gap-0.5">
               {habits.slice(0, 6).map((h) => (
                 <button
+                  type="button"
                   key={h.id}
                   onClick={() => onLink({ linkedHabitId: h.id, linkedWorkoutId: null })}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-accent"
+                  className="flex min-h-tap items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
                 >
                   <span>{h.icon}</span>
                   <span className="truncate">{h.name}</span>
-                  {item.linkedHabitId === h.id && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                  {item.linkedHabitId === h.id && <Check className="ml-auto h-3.5 w-3.5 text-primary-ink" />}
                 </button>
               ))}
             </div>
@@ -217,13 +220,14 @@ function LinkPopover({
             <div className="flex flex-col gap-0.5">
               {workouts.slice(0, 8).map((w) => (
                 <button
+                  type="button"
                   key={w.id}
                   onClick={() => onLink({ linkedWorkoutId: w.id, linkedHabitId: null })}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-accent"
+                  className="flex min-h-tap items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
                 >
                   <span>🏋️</span>
                   <span className="truncate">{w.name}</span>
-                  {item.linkedWorkoutId === w.id && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                  {item.linkedWorkoutId === w.id && <Check className="ml-auto h-3.5 w-3.5 text-primary-ink" />}
                 </button>
               ))}
             </div>

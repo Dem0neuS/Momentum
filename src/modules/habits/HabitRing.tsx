@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Check, Minus, Pencil, Plus, X } from 'lucide-react';
 import type { Habit, HabitLog } from '@/lib/types';
@@ -39,7 +39,7 @@ export function HabitRing({
   habit,
   log,
   date,
-  size = 46,
+  size = 44,
   onOpenSkip,
   className,
 }: {
@@ -54,6 +54,31 @@ export function HabitRing({
   const [inputMode, setInputMode] = useState(false);
   const [value, setValue] = useState('');
   const store = useHabitsStore;
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Быстрое меню не должно переживать смену привычки или дня,
+  // иначе «залипает» поверх соседних карточек и съедает их тапы.
+  useEffect(() => {
+    setMenu(null);
+    setInputMode(false);
+  }, [habit.id, date]);
+
+  // Закрытие по клику вне и по Escape — как в heatmap.
+  useEffect(() => {
+    if (menu !== 'counter') return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setMenu(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenu(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menu]);
 
   const target = habit.targetCount;
   const isCounter = target > 0;
@@ -67,12 +92,19 @@ export function HabitRing({
   const [burstKey, setBurstKey] = useState(0);
   const justCompleted = done;
 
-  const color = skipped ? '#94A3B8' : habit.color;
+  const color = skipped ? 'var(--skip)' : habit.color;
 
   const handleClick = () => {
     if (skipped) {
       // Снять пропуск по тапу
       useHabitsStore.getState().setLogStatus(habit.id, date, 'none');
+      return;
+    }
+    if (done) {
+      // Повторный тап по готовой галочке снимает отметку,
+      // в том числе у привычек со счётчиком.
+      setMenu(null);
+      useHabitsStore.getState().toggleHabit(habit.id, date);
       return;
     }
     if (isCounter) {
@@ -88,17 +120,38 @@ export function HabitRing({
     }
   }, 480);
 
-  const quick = (fn: () => void) => {
+  // «+» и «−» оставляют меню открытыми — счётчик удобно крутить подряд,
+  // а вот «отметить полностью» закрывает, чтобы не остаться висеть.
+  const quick = (fn: () => void, close = false) => {
     fn();
     vibrate(6);
+    if (close) setMenu(null);
   };
 
   return (
-    <div className={cn('relative inline-flex', className)}>
+    <div ref={rootRef} className={cn('relative inline-flex', className)}>
       <div
         {...longPress}
         onClick={handleClick}
-        className="cursor-pointer select-none rounded-full outline-none [touch-action:manipulation]"
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handleClick();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-pressed={done}
+        aria-label={
+          skipped
+            ? 'Пропуск. Нажмите, чтобы снять'
+            : isCounter
+              ? `Счётчик привычки: ${valueNow} из ${target}`
+              : done
+                ? 'Привычка выполнена'
+                : `Отметить привычку «${habit.name}»`
+        }
+        className="h-tap w-tap cursor-pointer select-none rounded-full outline-none [touch-action:manipulation]"
         title={
           skipped
             ? 'Пропуск. Нажмите, чтобы снять'
@@ -113,8 +166,11 @@ export function HabitRing({
           size={size}
           progress={done || skipped ? 1 : progress}
           color={color}
+          gradient={done && !skipped}
           glow={done}
-          trackColor={skipped ? '#94A3B8' : undefined}
+          trackColor={skipped ? 'var(--skip-soft)' : undefined}
+          label={`Прогресс привычки «${habit.name}»`}
+          valueText={isCounter ? `${valueNow} из ${target}` : done ? 'Выполнено' : skipped ? 'Пропуск' : 'Нет отметки'}
         >
           <motion.div
             key={`${habit.id}-${date}-${status}-${done ? 'done' : 'open'}`}
@@ -127,7 +183,7 @@ export function HabitRing({
               }
             }}
             className="flex items-center justify-center"
-            style={{ color }}
+            style={{ color: done && !skipped ? 'var(--on-brand)' : color }}
           >
             {skipped ? (
               <span className="font-semibold" style={{ fontSize: size * 0.42 }}>
@@ -144,7 +200,7 @@ export function HabitRing({
         </ProgressRing>
       </div>
 
-      <Burst key={burstKey} trigger={burstKey > 0} color={habit.color} />
+      <Burst key={burstKey} trigger={burstKey > 0} color="var(--brand-500)" />
 
       {/* Быстрое меню счётчика */}
       <AnimatePresence>
@@ -155,7 +211,7 @@ export function HabitRing({
             exit={{ opacity: 0, y: 6, scale: 0.96 }}
             transition={{ duration: 0.12 }}
             onClick={(e) => e.stopPropagation()}
-            className="absolute right-0 top-full z-30 mt-1.5 w-44 rounded-xl border border-border/70 bg-popover p-2 shadow-soft-lg"
+            className="absolute right-0 top-full z-30 mt-1.5 w-44 rounded-lg border border-border/70 bg-popover p-2 shadow-pop"
           >
             {inputMode ? (
               <div className="flex gap-1.5">
@@ -193,7 +249,7 @@ export function HabitRing({
                 <Button size="sm" variant="outline" onClick={() => quick(() => store.getState().incrementHabit(habit.id, date))}>
                   <Plus className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="sm" variant="gradient" onClick={() => quick(() => store.getState().setFull(habit.id, date, true))} title="Отметить полностью">
+                <Button size="sm" variant="gradient" onClick={() => quick(() => store.getState().setFull(habit.id, date, true), true)} title="Отметить полностью">
                   <Check className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -211,7 +267,8 @@ export function HabitRing({
                 <Pencil className="h-3.5 w-3.5" /> Ввести значение
               </Button>
               <button
-                className="w-full rounded-lg px-2 py-1 text-left text-xs text-muted-foreground transition-colors hover:bg-accent"
+                type="button"
+                className="min-h-tap w-full rounded-lg px-2 py-1 text-left text-xs text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
                 onClick={() => {
                   setMenu(null);
                   habit.allowSkips ? onOpenSkip?.() : store.getState().setLogStatus(habit.id, date, 'none');

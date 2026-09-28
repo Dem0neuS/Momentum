@@ -43,16 +43,22 @@ export function CategorySection({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-2xl border bg-card shadow-soft transition-all',
+        'overflow-hidden rounded-lg border border-border/70 bg-card shadow-card transition-all',
         isOver && 'ring-2 ring-primary/50',
       )}
     >
       <div
-        className="flex w-full items-center gap-3 px-3 py-2.5"
+        className="flex w-full items-center gap-3 px-3 py-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
         role="button"
         tabIndex={0}
+        aria-expanded={!collapsed}
         onClick={() => setCollapsed(category.id, !collapsed)}
-        onKeyDown={(e) => e.key === 'Enter' && setCollapsed(category.id, !collapsed)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setCollapsed(category.id, !collapsed);
+          }
+        }}
       >
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg"
@@ -73,7 +79,8 @@ export function CategorySection({
           align="end"
           trigger={
             <button
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              type="button"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-7 sm:w-7"
               onClick={(e) => e.stopPropagation()}
               aria-label="Управление категорией"
             >
@@ -97,8 +104,9 @@ export function CategorySection({
           ]}
         />
         <motion.button
+          type="button"
           animate={{ rotate: collapsed ? 0 : 180 }}
-          className="rounded-lg p-1 text-muted-foreground"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-7 sm:w-7"
           aria-label={collapsed ? 'Развернуть' : 'Свернуть'}
         >
           <ChevronDown className="h-4 w-4" />
@@ -163,7 +171,7 @@ function SubDropZone({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={cn(className, isOver && 'rounded-2xl ring-2 ring-primary/40')}>
+    <div ref={setNodeRef} className={cn(className, isOver && 'rounded-lg ring-2 ring-primary/40')}>
       {children}
     </div>
   );
@@ -193,9 +201,11 @@ function SubcategoryGroup({
         </span>
         <span className="text-[11px] text-muted-foreground">{items.length}</span>
         <button
-          className="ml-auto rounded p-0.5 text-muted-foreground/50 transition-colors hover:text-foreground"
+          type="button"
+          className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground/50 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-6 sm:w-6"
           onClick={() => onAddHabit(sub.categoryId)}
           title="Добавить привычку"
+          aria-label="Добавить привычку"
         >
           <Plus className="h-3.5 w-3.5" />
         </button>
@@ -235,7 +245,7 @@ export function UncategorizedSection({
   return (
     <section
       className={cn(
-        'rounded-2xl border border-dashed border-border/70 bg-card/50 p-3',
+        'rounded-lg border border-dashed border-border/70 bg-card/50 p-3',
         isOver && 'ring-2 ring-primary/50',
       )}
     >
@@ -244,7 +254,8 @@ export function UncategorizedSection({
         <span className="text-sm font-semibold">Без категории</span>
         {items.length > 0 && <span className="text-[11px] text-muted-foreground">{items.length}</span>}
         <button
-          className="ml-auto rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+          type="button"
+          className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-7 sm:w-7"
           onClick={onAddHabit}
           aria-label="Добавить привычку"
         >

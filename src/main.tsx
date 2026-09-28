@@ -15,12 +15,12 @@ createRoot(document.getElementById('root')!).render(
       position="bottom-center"
       toastOptions={{
         style: {
-          border: '1px solid hsl(var(--border))',
-          background: 'hsl(var(--card))',
-          color: 'hsl(var(--foreground))',
-          borderRadius: '14px',
-          boxShadow: '0 12px 32px -8px rgba(15, 23, 42, 0.35)',
-          fontSize: '14px',
+          border: 'var(--border-card)',
+          background: 'var(--surface)',
+          color: 'var(--text)',
+          borderRadius: 'var(--r-lg)',
+          boxShadow: 'var(--shadow-pop)',
+          fontSize: 'var(--fs-caption)',
         },
       }}
     />

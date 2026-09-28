@@ -30,8 +30,9 @@ export function SkipReasons({
     <div className="space-y-2">
       {onBack && (
         <button
+          type="button"
           onClick={onBack}
-          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex min-h-tap items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Назад
         </button>
@@ -42,24 +43,27 @@ export function SkipReasons({
       </p>
       <div className="space-y-1">
         <button
+          type="button"
           onClick={() => apply()}
-          className="w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+          className="min-h-tap w-full rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
         >
           Без причины
         </button>
         {SKIP_REASONS.filter((r) => r.value !== 'Свой вариант').map((r) => (
           <button
+            type="button"
             key={r.value}
             onClick={() => apply(r.value)}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+            className="flex min-h-tap w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
           >
             <span>{r.icon}</span> {r.value}
           </button>
         ))}
         {!custom ? (
           <button
+            type="button"
             onClick={() => setCustom(true)}
-            className="w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent"
+            className="min-h-tap w-full rounded-lg px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
           >
             ✍️ Свой вариант…
           </button>
@@ -76,11 +80,11 @@ export function SkipReasons({
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
               placeholder="Причина пропуска"
-              className="h-9 flex-1 rounded-lg border border-input bg-transparent px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+              className="h-field flex-1 rounded-lg border border-input bg-transparent px-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             />
             <button
               type="submit"
-              className="rounded-lg bg-primary px-3 text-sm text-primary-foreground"
+              className="min-h-tap rounded-lg bg-primary px-3 text-sm text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
             >
               Ок
             </button>
@@ -104,7 +108,7 @@ export function SkipMenuDialog({
   date: string;
 }) {
   return (
-    <Dialog open={open} onClose={onClose} size="sm" hideClose>
+    <Dialog open={open} onClose={onClose} size="sm" hideClose ariaLabel="Пропуск дня">
       {habit ? (
         <>
           <div className="mb-2 flex items-center gap-2.5">

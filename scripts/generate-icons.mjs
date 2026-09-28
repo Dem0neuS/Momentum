@@ -8,9 +8,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const outDir = join(__dirname, '..', 'public', 'icons');
 mkdirSync(outDir, { recursive: true });
 
-const VIOLET = [139, 92, 246];
-const BLUE = [59, 130, 246];
-const NAVY = [15, 23, 42];
+const VIOLET = [124, 92, 255];
+const BLUE = [74, 140, 255];
+const NAVY = [10, 12, 18];
 const WHITE = [255, 255, 255];
 
 function lerp(a, b, t) {

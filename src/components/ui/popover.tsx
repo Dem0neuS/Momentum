@@ -69,7 +69,7 @@ export function Popover({
             exit={{ opacity: 0, scale: 0.97, y: -4 }}
             transition={{ duration: 0.12 }}
             className={cn(
-              'absolute z-40 min-w-[180px] rounded-xl border border-border/70 bg-popover text-popover-foreground shadow-soft-lg',
+              'absolute z-40 min-w-[180px] rounded-lg border border-border/70 bg-popover text-popover-foreground shadow-pop',
               sideClasses[side],
               alignClasses[align],
               panelClassName,

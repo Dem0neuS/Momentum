@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 
 export function StreakBadge({
   count,
-  color = '#F59E0B',
+  color = 'var(--warning)',
   className,
 }: {
   count: number;
@@ -27,8 +27,9 @@ export function StreakBadge({
       <Flame className="h-3.5 w-3.5" style={{ color }} />
       <motion.span
         key={count}
-        initial={{ scale: 1.5, color: '#EF4444' }}
-        animate={{ scale: 1, color: 'inherit' }}
+        initial={{ scale: 1.5 }}
+        animate={{ scale: 1 }}
+        style={{ color: 'var(--warning-ink)' }}
         transition={{ type: 'spring', stiffness: 400, damping: 14 }}
       >
         {count}

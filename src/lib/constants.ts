@@ -3,33 +3,33 @@ import type { AppSettings, WorkoutType } from './types';
 export const BRAND = {
   name: 'Momentum',
   slogan: 'Твой день. Твой ритм. Твой прогресс.',
-  navy: '#0F172A',
-  violet: '#8B5CF6',
-  blue: '#3B82F6',
-  gradient: 'linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%)',
+  navy: '#0A0C12',
+  violet: '#6C4DF6',
+  blue: '#4A8CFF',
+  gradient: 'linear-gradient(135deg, #7C5CFF 0%, #4A8CFF 100%)',
 };
 
 export const STATUS_COLORS = {
-  success: '#22C55E',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  skip: '#94A3B8',
+  success: '#2FD07E',
+  warning: '#F2B44C',
+  error: '#FF5D6C',
+  skip: '#F2B44C',
 };
 
 /** Палитра для выбора цвета привычек и категорий */
 export const COLOR_PALETTE = [
-  '#8B5CF6', // фиолетовый
-  '#3B82F6', // синий
-  '#22C55E', // зелёный
-  '#F59E0B', // янтарный
-  '#EF4444', // красный
+  '#6C4DF6', // фиолетовый
+  '#4A8CFF', // синий
+  '#2FD07E', // зелёный
+  '#F2B44C', // янтарный
+  '#FF5D6C', // красный
   '#EC4899', // розовый
   '#14B8A6', // бирюзовый
   '#F97316', // оранжевый
-  '#06B6D4', // голубой
+  '#38BDF8', // голубой
   '#84CC16', // лайм
-  '#6366F1', // индиго
-  '#94A3B8', // серо-голубой
+  '#A78BFA', // индиго
+  '#7A8398', // серо-голубой
 ];
 
 /** Алиас палитры для таблиц и стилей */
@@ -51,19 +51,43 @@ export const EMOJI_PALETTE = [
 
 export const WORKOUT_TYPE_META: Record<
   WorkoutType,
-  { label: string; color: string; emoji: string }
+  { label: string; color: string; ink: string; soft: string; emoji: string }
 > = {
-  strength: { label: 'Силовая', color: '#8B5CF6', emoji: '🏋️' },
-  cardio: { label: 'Кардио', color: '#3B82F6', emoji: '🏃' },
-  stretch: { label: 'Растяжка', color: '#22C55E', emoji: '🧘' },
-  other: { label: 'Другое', color: '#94A3B8', emoji: '🏅' },
+  strength: {
+    label: 'Силовая',
+    color: 'var(--strength)',
+    ink: 'var(--strength-ink)',
+    soft: 'var(--strength-soft)',
+    emoji: '🏋️',
+  },
+  cardio: {
+    label: 'Кардио',
+    color: 'var(--cardio)',
+    ink: 'var(--cardio-ink)',
+    soft: 'var(--cardio-soft)',
+    emoji: '🏃',
+  },
+  stretch: {
+    label: 'Растяжка',
+    color: 'var(--done)',
+    ink: 'var(--done-ink)',
+    soft: 'var(--done-soft)',
+    emoji: '🧘',
+  },
+  other: {
+    label: 'Другое',
+    color: 'var(--miss)',
+    ink: 'var(--text-muted)',
+    soft: 'var(--surface-2)',
+    emoji: '🏅',
+  },
 };
 
 export const DEFAULT_CATEGORIES = [
-  { name: 'Здоровье', icon: '🩺', color: '#22C55E' },
-  { name: 'Спорт', icon: '💪', color: '#3B82F6' },
-  { name: 'Работа', icon: '💼', color: '#8B5CF6' },
-  { name: 'Учёба', icon: '📚', color: '#F59E0B' },
+  { name: 'Здоровье', icon: '🩺', color: '#2FD07E' },
+  { name: 'Спорт', icon: '💪', color: '#4A8CFF' },
+  { name: 'Работа', icon: '💼', color: '#6C4DF6' },
+  { name: 'Учёба', icon: '📚', color: '#F2B44C' },
   { name: 'Дом', icon: '🏠', color: '#14B8A6' },
   { name: 'Развитие', icon: '🌱', color: '#EC4899' },
   { name: 'Финансы', icon: '💰', color: '#06B6D4' },
@@ -81,7 +105,7 @@ export const STARTER_HABITS = [
   {
     name: 'Пить воду',
     icon: '💧',
-    color: '#3B82F6',
+    color: '#4A8CFF',
     category: 'Здоровье',
     subcategory: 'Питание',
     targetCount: 8,
@@ -90,7 +114,7 @@ export const STARTER_HABITS = [
   {
     name: 'Тренировка',
     icon: '💪',
-    color: '#8B5CF6',
+    color: '#6C4DF6',
     category: 'Спорт',
     subcategory: 'Силовые',
     targetCount: 0,
@@ -108,7 +132,7 @@ export const STARTER_HABITS = [
   {
     name: 'Готовиться ко сну до 23:00',
     icon: '😴',
-    color: '#22C55E',
+    color: '#2FD07E',
     category: 'Здоровье',
     subcategory: 'Сон',
     targetCount: 0,

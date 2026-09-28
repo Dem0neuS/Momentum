@@ -1,14 +1,32 @@
+import { useSyncExternalStore } from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSettingsStore } from '@/store/settingsStore';
 import type { ThemeMode } from '@/lib/types';
 import { Button } from './ui/button';
 
+const darkQuery = '(prefers-color-scheme: dark)';
+
+function subscribeToSystemTheme(callback: () => void): () => void {
+  const media = window.matchMedia(darkQuery);
+  media.addEventListener('change', callback);
+  return () => media.removeEventListener('change', callback);
+}
+
+function getSystemTheme(): boolean {
+  return window.matchMedia(darkQuery).matches;
+}
+
+function getServerSystemTheme(): boolean {
+  return false;
+}
+
 export function ThemeToggle() {
   const theme = useSettingsStore((s) => s.settings.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
 
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const systemDark = useSyncExternalStore(subscribeToSystemTheme, getSystemTheme, getServerSystemTheme);
+  const isDark = theme === 'dark' || (theme === 'system' && systemDark);
 
   const next: ThemeMode = isDark ? 'light' : 'dark';
 

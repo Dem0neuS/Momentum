@@ -1,68 +1,90 @@
+@import '../momentum-tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 220 33% 98%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 258 90% 66%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 22% 93%;
-    --secondary-foreground: 222 47% 15%;
-    --muted: 220 22% 93%;
-    --muted-foreground: 217 17% 45%;
-    --accent: 220 24% 92%;
-    --accent-foreground: 222 47% 15%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 17% 90%;
-    --input: 220 17% 86%;
-    --ring: 258 90% 66%;
-    --radius: 1rem;
-  }
-
-  .dark {
-    --background: 222 47% 9%;
-    --foreground: 210 20% 96%;
-    --card: 222 42% 12%;
-    --card-foreground: 210 20% 96%;
-    --popover: 222 42% 11%;
-    --popover-foreground: 210 20% 96%;
-    --primary: 258 90% 70%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 222 30% 18%;
-    --secondary-foreground: 210 20% 92%;
-    --muted: 222 30% 16%;
-    --muted-foreground: 218 15% 65%;
-    --accent: 222 30% 18%;
-    --accent-foreground: 210 20% 96%;
-    --destructive: 0 72% 58%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 222 25% 19%;
-    --input: 222 25% 22%;
-    --ring: 258 90% 70%;
-  }
-
   * {
     @apply border-border;
   }
 
   html {
+    min-width: 320px;
+    background: var(--bg);
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: var(--lh-body);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0;
+  }
+
+  h1 {
+    font-size: var(--fs-h1);
+    line-height: var(--lh-h1);
+    font-weight: var(--fw-h1);
+    letter-spacing: -.01em;
+  }
+
+  h2 {
+    font-size: var(--fs-h2);
+    line-height: var(--lh-h2);
+    font-weight: var(--fw-h2);
+  }
+
+  h3 {
+    font-size: var(--fs-h3);
+    line-height: var(--lh-h3);
+    font-weight: var(--fw-h3);
+  }
+
+  .display {
+    font-size: var(--fs-display);
+    line-height: var(--lh-display);
+    font-weight: var(--fw-display);
+    letter-spacing: -.02em;
+  }
+
+  .caption {
+    font-size: var(--fs-caption);
+    line-height: var(--lh-caption);
+    font-weight: var(--fw-caption);
+    color: var(--text-muted);
+  }
+
+  .micro {
+    font-size: var(--fs-micro);
+    line-height: var(--lh-micro);
+    font-weight: var(--fw-micro);
+    letter-spacing: var(--track-micro);
+    text-transform: uppercase;
+    color: var(--text-dim);
   }
 
   ::selection {
-    background: rgb(139 92 246 / 0.3);
+    background: var(--done-soft);
+    color: var(--text);
+  }
+
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
   }
 }
 
@@ -70,13 +92,14 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
 
   .gradient-text {
-    background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
+    background: var(--grad-brand);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -92,15 +115,34 @@
   width: 8px;
   height: 8px;
 }
+
 *::-webkit-scrollbar-track {
   background: transparent;
 }
+
 *::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.35);
+  background: rgb(var(--text-muted-rgb) / .35);
   border-radius: 8px;
 }
 
-/* Стилизация нативных контролов даты в тёмной теме */
-.dark input[type='date']::-webkit-calendar-picker-indicator {
-  filter: invert(0.8);
+/* Нативные контролы даты должны следовать выбранной теме. */
+[data-theme='dark'] input[type='date']::-webkit-calendar-picker-indicator {
+  filter: invert(.8);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

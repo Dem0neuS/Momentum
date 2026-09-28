@@ -3,11 +3,11 @@ export function LogoIcon({ size = 28 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 128 128" aria-hidden="true">
       <defs>
         <linearGradient id="mm-gradient" x1="0" y1="1" x2="1" y2="0">
-          <stop offset="0" stopColor="#8B5CF6" />
-          <stop offset="1" stopColor="#3B82F6" />
+          <stop offset="0" stopColor="var(--brand-gradient-start)" />
+          <stop offset="1" stopColor="var(--brand-gradient-end)" />
         </linearGradient>
       </defs>
-      <rect width="128" height="128" rx="30" fill="#0F172A" />
+      <rect width="128" height="128" rx="30" fill="var(--navy)" />
       <path
         d="M26 100 L50 66 L64 76 L96 34"
         stroke="url(#mm-gradient)"
@@ -16,7 +16,7 @@ export function LogoIcon({ size = 28 }: { size?: number }) {
         strokeLinejoin="round"
         fill="none"
       />
-      <path d="M96 34 l-18 2 M96 34 l2 18" stroke="#3B82F6" strokeWidth="10" strokeLinecap="round" fill="none" />
+      <path d="M96 34 l-18 2 M96 34 l2 18" stroke="var(--flow-500)" strokeWidth="10" strokeLinecap="round" fill="none" />
       <path d="M44 104 h26" stroke="#fff" strokeWidth="8" strokeLinecap="round" />
     </svg>
   );

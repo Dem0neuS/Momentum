@@ -45,9 +45,9 @@ export function Menu({
                 key={`item-${i}`}
                 disabled={item.disabled}
                 className={cn(
-                  'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium transition-colors disabled:opacity-40',
+                  'flex min-h-tap w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60',
                   item.danger
-                    ? 'text-destructive hover:bg-destructive/10'
+                    ? 'text-destructive-ink hover:bg-destructive/10'
                     : 'text-foreground hover:bg-accent',
                 )}
                 onClick={() => {

@@ -4,11 +4,16 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Momentum — личный трекер: привычки, тренировки, таблицы и план 3-2-1",
+  "author": "Momentum",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "node scripts/generate-icons.mjs",
+    "electron:dev": "node scripts/electron-dev.mjs",
+    "electron:start": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder --win --publish never"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -19,6 +24,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "dexie": "^4.0.8",
+    "electron-updater": "^6.8.9",
     "framer-motion": "^11.11.7",
     "hyperformula": "^2.7.0",
     "lucide-react": "^0.451.0",
@@ -35,6 +41,8 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
+    "electron": "44.4.5",
+    "electron-builder": "^26.15.3",
     "pngjs": "^7.0.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
@@ -42,5 +50,74 @@
     "typescript": "~5.6.2",
     "vite": "^5.4.8",
     "vite-plugin-pwa": "^0.20.5"
+  },
+  "build": {
+    "appId": "app.momentum.desktop",
+    "productName": "Momentum",
+    "copyright": "Momentum",
+    "directories": {
+      "output": "release",
+      "buildResources": "public/icons"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "!node_modules/**/*",
+      "node_modules/electron-updater/**/*",
+      "node_modules/builder-util-runtime/**/*",
+      "node_modules/lazy-val/**/*",
+      "node_modules/js-yaml/**/*",
+      "node_modules/argparse/**/*",
+      "node_modules/fs-extra/**/*",
+      "node_modules/graceful-fs/**/*",
+      "node_modules/jsonfile/**/*",
+      "node_modules/universalify/**/*",
+      "node_modules/lodash.escaperegexp/**/*",
+      "node_modules/lodash.isequal/**/*",
+      "node_modules/semver/**/*",
+      "node_modules/tiny-typed-emitter/**/*",
+      "node_modules/at-least-node/**/*",
+      "node_modules/debug/**/*",
+      "node_modules/ms/**/*",
+      "node_modules/sax/**/*"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "Dem0neuS",
+      "repo": "momentum"
+    },
+    "win": {
+      "icon": "public/icons/icon-512.png",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Momentum-${version}-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "Momentum-${version}-portable.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Momentum",
+      "runAfterFinish": true
+    },
+    "electronVersion": "44.4.5"
   }
 }

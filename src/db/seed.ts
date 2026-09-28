@@ -38,7 +38,7 @@ export async function seedIfNeeded(): Promise<boolean> {
       categoryId: cat?.id ?? '',
       name: s.name,
       icon: s.icon,
-      color: cat?.color ?? '#94A3B8',
+      color: cat?.color ?? '#7A8398',
       order: i,
     };
   });

@@ -11,7 +11,7 @@ export function Sidebar({
   onNavigate: (id: SectionId) => void;
 }) {
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border/50 bg-card/60 backdrop-blur-xl md:flex">
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-60 flex-col border-r border-border/70 bg-background/85 backdrop-blur-xl md:flex">
       <div className="flex h-16 items-center px-5">
         <Logo size={30} />
       </div>
@@ -23,19 +23,21 @@ export function Sidebar({
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive ? 'text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+                'relative flex min-h-nav items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
+                isActive ? 'text-on-brand' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
               )}
             >
               {isActive && (
                 <motion.span
                   layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-xl bg-gradient-to-r from-violet-500/15 to-blue-500/15 ring-1 ring-primary/20"
+                  aria-hidden
+                  className="absolute inset-0 rounded-md bg-gradient-brand shadow-card"
                   transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                 />
               )}
-              <Icon className={cn('relative z-10 h-[18px] w-[18px]', isActive && 'text-primary')} />
+              <Icon className="relative z-10 h-[18px] w-[18px]" />
               <span className="relative z-10">{item.label}</span>
             </button>
           );

@@ -76,7 +76,7 @@ export function HabitsPage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-card px-3 py-1.5 text-sm">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <Sparkles className="h-3.5 w-3.5 text-primary-ink" />
             <span className="font-semibold">{best}</span>
             <span className="text-muted-foreground">макс. серия</span>
           </div>
@@ -84,8 +84,9 @@ export function HabitsPage() {
             size={44}
             stroke={4}
             progress={total > 0 ? doneToday / total : 0}
-            color="#8B5CF6"
-            trackColor="rgba(139,92,246,0.15)"
+            gradient
+            trackColor="var(--surface-2)"
+            label="Прогресс привычек на сегодня"
           >
             <span className="text-[10px] font-semibold text-muted-foreground">
               {Math.round(total > 0 ? (doneToday / total) * 100 : 0)}%
@@ -95,13 +96,14 @@ export function HabitsPage() {
       </div>
 
       {/* Поиск и фильтры */}
-      <div className="sticky top-[calc(var(--header-h,64px)+8px)] z-20 -mx-2 space-y-2 rounded-2xl bg-background/85 px-2 py-2 backdrop-blur">
+      <div className="sticky top-[calc(var(--header-h)+8px)] z-20 -mx-2 space-y-2 rounded-lg bg-background/85 px-2 py-2 backdrop-blur">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Поиск привычки…"
+            aria-label="Поиск привычки"
             className="pl-9"
           />
         </div>
@@ -120,7 +122,7 @@ export function HabitsPage() {
           </FilterChip>
           <button
             onClick={() => setManagerOpen(true)}
-            className="shrink-0 rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+            className="min-h-tap shrink-0 rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium text-primary-ink transition-colors hover:bg-primary/10"
           >
             Категории
           </button>
@@ -160,7 +162,7 @@ export function HabitsPage() {
       {/* FAB */}
       <button
         onClick={() => openAdd(null)}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-lg shadow-violet-500/30 transition-transform active:scale-95 md:bottom-6 md:right-6"
+        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-lg bg-brand text-on-brand shadow-pop transition-transform active:scale-95 md:bottom-6 md:right-6"
         aria-label="Добавить привычку"
       >
         <Plus className="h-6 w-6" />
@@ -202,9 +204,9 @@ function FilterChip({
     <button
       onClick={onClick}
       className={cn(
-        'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+        'flex min-h-tap shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
         active
-          ? 'border-transparent bg-gradient-to-r from-violet-500 to-blue-500 text-white shadow-sm'
+          ? 'border-transparent bg-brand text-on-brand shadow-card'
           : 'border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground',
       )}
     >

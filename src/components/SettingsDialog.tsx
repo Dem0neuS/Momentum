@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Field } from '@/components/ui/label';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { InstallAppCard } from '@/components/InstallAppCard';
+import { UpdateAppCard } from '@/components/UpdateAppCard';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useHistoryStore } from '@/store/historyStore';
 import { collectAllData, replaceAllData, clearAllData } from '@/db/db';
@@ -175,8 +177,15 @@ export function SettingsDialog({ open, onClose }: { open: boolean; onClose: () =
               <Switch
                 checked={settings.eveningReminder}
                 onCheckedChange={(v) => update({ eveningReminder: v })}
+                label="Вечернее напоминание"
               />
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Приложение</h3>
+            <InstallAppCard />
+            <UpdateAppCard />
           </section>
 
           <section className="space-y-3">

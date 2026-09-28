@@ -32,6 +32,7 @@ export function WorkoutsPage() {
     0,
   );
   const totalWeight = weekWorkouts.reduce((a, w) => {
+    if (w.type === 'cardio') return a;
     return (
       a +
       exercises
@@ -103,7 +104,7 @@ export function WorkoutsPage() {
 
 function SummaryCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-soft">
+    <div className="rounded-lg border border-border/70 bg-card p-3 shadow-card">
       <div className="flex items-center gap-1.5 text-muted-foreground">
         {icon}
         <span className="text-[11px] font-medium">{label}</span>

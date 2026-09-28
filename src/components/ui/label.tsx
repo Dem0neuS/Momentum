@@ -23,11 +23,38 @@ export function Field({
   hint?: React.ReactNode;
   className?: string;
 }) {
+  const generatedId = React.useId();
+  const child = React.Children.only(children) as React.ReactElement<{
+    id?: string;
+    role?: string;
+    'aria-label'?: string;
+    'aria-labelledby'?: string;
+    'aria-describedby'?: string;
+  }>;
+  const isGroup = typeof child.type === 'string' && ['div', 'fieldset'].includes(child.type);
+  const controlId = child.props.id ?? `field-${generatedId}`;
+  const labelId = `label-${generatedId}`;
+  const hintId = hint ? `hint-${generatedId}` : undefined;
+  const describedBy = [child.props['aria-describedby'], hintId].filter(Boolean).join(' ') || undefined;
+  const control = isGroup
+    ? React.cloneElement(child, {
+        role: child.props.role ?? 'group',
+        'aria-labelledby': labelId,
+        'aria-describedby': describedBy,
+      })
+    : React.cloneElement(child, { id: controlId, 'aria-describedby': describedBy });
+
   return (
     <div className={cn('space-y-1.5', className)}>
-      <Label>{label}</Label>
-      {children}
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <Label id={labelId} htmlFor={isGroup ? undefined : controlId}>
+        {label}
+      </Label>
+      {control}
+      {hint ? (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

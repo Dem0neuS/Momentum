@@ -22,15 +22,16 @@ export function Switch({
       disabled={disabled}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-not-allowed disabled:opacity-50',
-        checked ? 'bg-gradient-to-r from-violet-500 to-blue-500' : 'bg-muted',
+        'relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-not-allowed disabled:opacity-50 before:absolute before:left-0 before:top-1/2 before:h-6 before:w-11 before:-translate-y-1/2 before:rounded-full before:transition-colors',
+        checked ? 'before:bg-brand' : 'before:bg-muted',
         className,
       )}
     >
       <span
+        aria-hidden
         className={cn(
-          'inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform',
-          checked ? 'translate-x-[22px]' : 'translate-x-0.5',
+          'absolute left-0.5 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full bg-on-brand shadow transition-transform',
+          checked ? 'translate-x-5' : 'translate-x-0',
         )}
       />
     </button>

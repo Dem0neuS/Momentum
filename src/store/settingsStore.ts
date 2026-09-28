@@ -4,11 +4,37 @@ import { DEFAULT_SETTINGS } from '@/lib/constants';
 import { saveSettings } from '@/db/db';
 
 const THEME_KEY = 'momentum:theme';
+const THEME_COLORS: Record<'light' | 'dark', string> = {
+  light: '#F5F6FA',
+  dark: '#0A0C12',
+};
+
+let systemThemeQuery: MediaQueryList | null = null;
+
+function syncThemeColor(theme: ThemeMode): void {
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const resolved = theme === 'dark' || (theme === 'system' && systemDark) ? 'dark' : 'light';
+  document.documentElement.dataset.themeResolved = resolved;
+  document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[resolved]);
+}
+
+function watchSystemTheme(): void {
+  if (systemThemeQuery) return;
+  systemThemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const update = () => {
+    if (document.documentElement.dataset.theme === 'system') syncThemeColor('system');
+  };
+  if (systemThemeQuery.addEventListener) {
+    systemThemeQuery.addEventListener('change', update);
+  } else {
+    systemThemeQuery.addListener(update);
+  }
+}
 
 export function applyTheme(theme: ThemeMode): void {
-  const root = document.documentElement;
-  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  root.classList.toggle('dark', theme === 'dark' || (theme === 'system' && systemDark));
+  document.documentElement.dataset.theme = theme;
+  syncThemeColor(theme);
+  watchSystemTheme();
   try {
     localStorage.setItem(THEME_KEY, theme);
   } catch {

@@ -47,7 +47,7 @@ export function SheetsPage() {
   const toolBtn = (active: boolean) =>
     cn(
       'flex h-8 w-8 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
-      active && 'border-primary/40 bg-primary/10 text-primary',
+      active && 'border-primary/40 bg-primary/10 text-primary-ink',
     );
 
   const sheetCount = sheets.length;
@@ -77,7 +77,7 @@ export function SheetsPage() {
       ) : (
         <>
           {/* Панель инструментов */}
-          <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border/60 bg-card p-1.5 shadow-soft">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-border/70 bg-card p-1.5 shadow-card">
             <button
               className={toolBtn(!!selectedCell?.style?.bold)}
               onClick={() => style({ bold: !selectedCell?.style?.bold })}
@@ -168,7 +168,7 @@ export function SheetsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="text-destructive-ink hover:bg-destructive/10 hover:text-destructive-ink"
                 onClick={() => {
                   if (!sheet) return;
                   if (globalThis.confirm(`Удалить последнюю строку листа «${sheet.name}»?`)) {
@@ -182,7 +182,7 @@ export function SheetsPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="text-destructive-ink hover:bg-destructive/10 hover:text-destructive-ink"
                 onClick={() => {
                   if (!sheet) return;
                   if (globalThis.confirm(`Удалить последний столбец листа «${sheet.name}»?`)) {

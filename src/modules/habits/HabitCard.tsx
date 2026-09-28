@@ -66,10 +66,10 @@ export function HabitCard({
           opacity: isDragging ? 0.9 : 1,
         }}
         className={cn(
-          'group relative flex select-none items-center gap-2 rounded-2xl border bg-card p-3 pl-4 shadow-soft transition-shadow hover:shadow-soft-lg',
+          'group relative flex min-h-row select-none items-center gap-2 rounded-lg border border-border/70 bg-card p-3 pl-4 shadow-card transition-shadow hover:shadow-pop',
           isDraggingOver && 'ring-2 ring-primary/40',
           isDragging && 'cursor-grabbing border-primary/40',
-          swipeX < -8 && 'border-violet-400/40',
+          swipeX < -8 && 'border-brand/40',
         )}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -108,15 +108,15 @@ export function HabitCard({
           {...attributes}
           {...listeners}
           data-drag-handle
-          className="flex h-9 w-9 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground/50 opacity-60 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing sm:h-6 sm:w-6"
-          aria-label="Перетащить привычку в другую категорию"
+          className="flex h-11 w-11 cursor-grab touch-none items-center justify-center rounded-lg text-muted-foreground/50 opacity-60 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing sm:h-6 sm:w-6"
+          aria-label={`Перетащить «${habit.name}» в другую категорию`}
         >
           <GripVertical className="h-4 w-4" />
         </button>
 
         {/* Тело карточки */}
         <button
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl text-left"
+          className="flex min-h-tap min-w-0 flex-1 items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
           onClick={() => onOpenDetail(habit)}
         >
           <div
@@ -148,7 +148,7 @@ export function HabitCard({
               onClick={openSkip}
               title="Пропустить день"
               aria-label="Пропустить день"
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:text-skip sm:h-auto sm:w-auto sm:p-0.5"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:text-skip-ink sm:h-auto sm:w-auto sm:p-0.5"
             >
               <Ban className="h-3.5 w-3.5" />
             </button>

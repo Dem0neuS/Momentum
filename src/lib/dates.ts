@@ -93,8 +93,9 @@ export function formatWeekdayShort(d: Date): string {
   return format(d, 'EEE', { locale: ru });
 }
 
+/** Короткое название месяца для узких колонок heatmap: «янв», «фев». */
 export function formatMonthShort(d: Date): string {
-  return format(d, 'LLLL', { locale: ru });
+  return format(d, 'LLL', { locale: ru }).replace(/\.\s*$/, '');
 }
 
 export function formatMonthYear(d: Date): string {

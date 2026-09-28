@@ -43,12 +43,18 @@ export function HabitDetail({
 
   return (
     <>
-      <Dialog open={!!habit} onClose={onClose} title={null} size="lg">
+      <Dialog
+        open={!!habit}
+        onClose={onClose}
+        title={null}
+        ariaLabel={habit ? `Привычка «${habit.name}»` : 'Привычка'}
+        size="lg"
+      >
         <div className="space-y-5">
           {/* Шапка */}
           <div className="flex items-start gap-3">
             <div
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-2xl"
               style={{ backgroundColor: `${habit.color}22` }}
             >
               {habit.icon}
@@ -69,9 +75,9 @@ export function HabitDetail({
 
           {/* Серия */}
           <div className="grid grid-cols-4 gap-2">
-            <StatCard icon={<Flame className="h-4 w-4 text-warning" />} value={data.streak?.current ?? 0} label="текущая серия" />
-            <StatCard icon={<Trophy className="h-4 w-4 text-warning" />} value={data.streak?.best ?? 0} label="лучшая серия" />
-            <StatCard icon={<Check className="h-4 w-4 text-success" />} value={data.streak?.totalDone ?? 0} label={`выполнено ${plural(data.streak?.totalDone ?? 0, ['день', 'дня', 'дней'])}`} />
+            <StatCard icon={<Flame className="h-4 w-4 text-warning-ink" />} value={data.streak?.current ?? 0} label="текущая серия" />
+            <StatCard icon={<Trophy className="h-4 w-4 text-warning-ink" />} value={data.streak?.best ?? 0} label="лучшая серия" />
+            <StatCard icon={<Check className="h-4 w-4 text-success-ink" />} value={data.streak?.totalDone ?? 0} label={`выполнено ${plural(data.streak?.totalDone ?? 0, ['день', 'дня', 'дней'])}`} />
             <StatCard icon={<span className="text-xs">📅</span>} value={data.thisMonth} label="в этом месяце" />
           </div>
 
@@ -79,7 +85,7 @@ export function HabitDetail({
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/60 p-3">
             <div className="flex items-center gap-2 text-sm font-medium">
               <span
-                className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] text-white"
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] text-on-brand"
                 style={{ backgroundColor: habit.color }}
               >
                 {habit.icon}
@@ -119,7 +125,7 @@ export function HabitDetail({
             <p className="mb-2 text-sm font-semibold">Год в деталях</p>
             <HabitHeatmap habit={habit} />
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Клик по дню — отметить, пропустить или очистить. Пропуск отображается серо-голубым.
+              Клик по дню — отметить, пропустить или очистить. Пропуск отображается янтарным.
             </p>
           </div>
 

@@ -30,7 +30,7 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
     addCategory({
       name: newName.trim(),
       icon: '📁',
-      color: categories.length % 2 === 0 ? '#8B5CF6' : '#3B82F6',
+      color: categories.length % 2 === 0 ? '#6C4DF6' : '#4A8CFF',
     });
     setNewName('');
   };
@@ -52,6 +52,7 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createCategory()}
               placeholder="Название новой категории…"
+              aria-label="Название новой категории"
             />
             <Button variant="gradient" onClick={createCategory}>
               <Plus className="h-4 w-4" /> Добавить
@@ -66,11 +67,14 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
                 const isOpen = expanded === cat.id;
                 const subs = subcategories.filter((sc) => sc.categoryId === cat.id);
                 return (
-                  <div key={cat.id} className="rounded-2xl border border-border/60 bg-background/30">
+                  <div key={cat.id} className="rounded-lg border border-border/60 bg-background/30">
                     <div className="flex flex-wrap items-center gap-2 p-3">
                       <button
+                        type="button"
                         onClick={() => setExpanded(isOpen ? null : cat.id)}
-                        className="rounded-lg p-1 text-muted-foreground"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-8 sm:w-8"
+                        aria-label={`${isOpen ? 'Свернуть' : 'Развернуть'} категорию ${cat.name}`}
+                        aria-expanded={isOpen}
                       >
                         <ChevronDown className={cn('h-4 w-4 transition-transform', isOpen && 'rotate-180')} />
                       </button>
@@ -78,10 +82,12 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
                       <Input
                         value={cat.name}
                         className="h-8 w-36 flex-1 rounded-lg text-sm"
+                        aria-label={`Название категории ${cat.name}`}
                         onChange={(e) => updateCategory(cat.id, { name: e.target.value })}
                       />
                       <button
-                        className="rounded-lg p-1.5 text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                        type="button"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-destructive-ink/70 transition-colors hover:bg-destructive/10 hover:text-destructive-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-8 sm:w-8"
                         onClick={() => {
                           setToDelete('cat');
                           setDeleteId(cat.id);
@@ -115,10 +121,12 @@ export function CategoryManager({ open, onClose }: { open: boolean; onClose: () 
                               <Input
                                 value={sub.name}
                                 className="h-8 flex-1 rounded-lg text-sm"
+                                aria-label={`Название подкатегории ${sub.name}`}
                                 onChange={(e) => updateSubcategory(sub.id, { name: e.target.value })}
                               />
                               <button
-                                className="rounded-lg p-1.5 text-destructive/70 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                type="button"
+                                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-destructive-ink/70 transition-colors hover:bg-destructive/10 hover:text-destructive-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-8 sm:w-8"
                                 onClick={() => {
                                   setToDelete('sub');
                                   setDeleteId(sub.id);
@@ -174,7 +182,7 @@ function SubcategoryAdd({
   const [icon, setIcon] = useState('🏷️');
   const add = () => {
     if (!name.trim()) return;
-    onAdd({ categoryId, name: name.trim(), icon, color: '#94A3B8' });
+    onAdd({ categoryId, name: name.trim(), icon, color: '#7A8398' });
     setName('');
   };
   return (
@@ -185,6 +193,7 @@ function SubcategoryAdd({
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && add()}
         placeholder="Добавить подкатегорию…"
+        aria-label="Название новой подкатегории"
         className="h-8 flex-1 rounded-lg text-sm"
       />
       <Button variant="ghost" size="sm" onClick={add}>

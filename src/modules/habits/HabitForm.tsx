@@ -31,7 +31,7 @@ export function HabitForm({
 
   const [name, setName] = useState('');
   const [icon, setIcon] = useState('💧');
-  const [color, setColor] = useState('#8B5CF6');
+  const [color, setColor] = useState('#6C4DF6');
   const [categoryId, setCategoryId] = useState<string>('');
   const [subcategoryId, setSubcategoryId] = useState<string>('');
   const [freqType, setFreqType] = useState<'daily' | 'days' | 'timesPerWeek'>('daily');
@@ -59,7 +59,7 @@ export function HabitForm({
     } else {
       setName('');
       setIcon('💧');
-      setColor('#8B5CF6');
+      setColor('#6C4DF6');
       setCategoryId(defaultCategoryId ?? '');
       setSubcategoryId('');
       setFreqType('daily');
@@ -205,9 +205,9 @@ export function HabitForm({
                       setDays((d) => (active ? d.filter((x) => x !== iso) : [...d, iso]))
                     }
                     className={cn(
-                      'flex h-9 flex-1 items-center justify-center rounded-xl text-xs font-medium transition-all',
+                      'flex h-11 flex-1 items-center justify-center rounded-md text-xs font-medium transition-all sm:h-9',
                       active
-                        ? 'bg-gradient-to-br from-violet-500 to-blue-500 text-white shadow-sm'
+                        ? 'bg-brand text-on-brand shadow-card'
                         : 'bg-secondary text-muted-foreground hover:bg-accent',
                     )}
                   >
@@ -252,12 +252,16 @@ export function HabitForm({
           )}
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-border/60 px-4 py-3">
+        <div className="flex items-center justify-between rounded-lg border border-border/70 bg-surface px-4 py-3">
           <div>
             <p className="text-sm font-medium">Разрешить пропуски</p>
             <p className="text-xs text-muted-foreground">Пропуск не разрывает серию</p>
           </div>
-          <Switch checked={allowSkips} onCheckedChange={setAllowSkips} />
+          <Switch
+            checked={allowSkips}
+            onCheckedChange={setAllowSkips}
+            label="Разрешить пропуски"
+          />
         </div>
       </div>
     </Dialog>

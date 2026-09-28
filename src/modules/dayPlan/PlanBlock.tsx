@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Check, Plus } from 'lucide-react';
@@ -12,11 +12,43 @@ import { PlanItem } from './PlanItem';
 
 export const BLOCK_META: Record<
   BlockType,
-  { labelKey: 'mainLabel' | 'mediumLabel' | 'smallLabel'; color: string; hint: string; emoji: string; defaultCountKey: 'mainDefaultCount' | 'mediumDefaultCount' | 'smallDefaultCount' }
+  {
+    labelKey: 'mainLabel' | 'mediumLabel' | 'smallLabel';
+    color: string;
+    soft: string;
+    borderClass: string;
+    hint: string;
+    emoji: string;
+    defaultCountKey: 'mainDefaultCount' | 'mediumDefaultCount' | 'smallDefaultCount';
+  }
 > = {
-  main: { labelKey: 'mainLabel', color: '#8B5CF6', hint: 'Главное на сегодня', emoji: '⭐', defaultCountKey: 'mainDefaultCount' },
-  medium: { labelKey: 'mediumLabel', color: '#3B82F6', hint: 'Важное', emoji: '🔷', defaultCountKey: 'mediumDefaultCount' },
-  small: { labelKey: 'smallLabel', color: '#F59E0B', hint: 'Мелочи', emoji: '🔹', defaultCountKey: 'smallDefaultCount' },
+  main: {
+    labelKey: 'mainLabel',
+    color: 'var(--brand-500)',
+    soft: 'color-mix(in srgb, var(--brand-500) 14%, transparent)',
+    borderClass: 'border-brand/30',
+    hint: 'Главное на сегодня',
+    emoji: '⭐',
+    defaultCountKey: 'mainDefaultCount',
+  },
+  medium: {
+    labelKey: 'mediumLabel',
+    color: 'var(--flow-500)',
+    soft: 'color-mix(in srgb, var(--flow-500) 14%, transparent)',
+    borderClass: 'border-flow/30',
+    hint: 'Важное',
+    emoji: '🔷',
+    defaultCountKey: 'mediumDefaultCount',
+  },
+  small: {
+    labelKey: 'smallLabel',
+    color: 'var(--skip)',
+    soft: 'var(--skip-soft)',
+    borderClass: 'border-skip/30',
+    hint: 'Мелочи',
+    emoji: '🔹',
+    defaultCountKey: 'smallDefaultCount',
+  },
 };
 
 export function PlanBlock({
@@ -52,17 +84,15 @@ export function PlanBlock({
     <section
       ref={setNodeRef}
       className={cn(
-        'rounded-2xl border bg-card p-3 shadow-soft transition-all',
+        'rounded-lg border-l-4 bg-card p-3 shadow-card transition-all',
         isOver && 'ring-2 ring-primary/50',
-        block === 'main' && 'border-violet-500/25',
-        block === 'medium' && 'border-blue-500/25',
-        block === 'small' && 'border-amber-500/25',
+        meta.borderClass,
       )}
     >
       <div className="mb-2 flex items-center gap-2">
         <span
-          className="flex h-8 w-8 items-center justify-center rounded-xl text-base"
-          style={{ backgroundColor: `${meta.color}1c` }}
+          className="flex h-8 w-8 items-center justify-center rounded-md text-base"
+          style={{ backgroundColor: meta.soft }}
         >
           {meta.emoji}
         </span>
@@ -72,7 +102,7 @@ export function PlanBlock({
         </div>
         <span className="ml-auto flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
           {done}/{items.length}
-          {limitReached && items.length > 0 && <Check className="h-3 w-3 text-success" />}
+          {limitReached && items.length > 0 && <Check className="h-3 w-3 text-success-ink" />}
         </span>
       </div>
 
@@ -85,7 +115,7 @@ export function PlanBlock({
       </SortableContext>
 
       {items.length === 0 && (
-        <p className="mb-1 rounded-xl border border-dashed border-border/60 px-3 py-3 text-center text-xs text-muted-foreground">
+        <p className="mb-1 rounded-md border border-dashed border-border/60 px-3 py-3 text-center text-xs text-muted-foreground">
           Пусто — добавьте пункт
         </p>
       )}
@@ -97,15 +127,16 @@ export function PlanBlock({
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && add()}
           placeholder={`Добавить в «${label}»…`}
-          className={cn('h-9 rounded-xl text-sm', `focus-visible:ring-${meta.color}`)}
-          style={{ ['--tw-ring-color' as string]: `${meta.color}66` }}
+          aria-label={`Новый пункт блока «${label}»`}
+          className="rounded-md text-sm"
+          style={{ '--tw-ring-color': meta.color } as CSSProperties}
         />
         <Input
           type="time"
           value={time}
           onChange={(e) => setTime(e.target.value)}
-          className="h-9 w-24 rounded-xl text-xs"
-          aria-label="Время"
+          aria-label={`Время пункта блока «${label}»`}
+          className="w-24 rounded-md text-xs"
         />
         <Button variant="ghost" size="icon-sm" onClick={add} aria-label="Добавить пункт" className="shrink-0">
           <Plus className="h-4 w-4" />

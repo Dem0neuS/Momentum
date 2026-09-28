@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
   DndContext,
+  KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useDroppable,
@@ -9,6 +10,7 @@ import {
   type DragEndEvent,
   type DragOverEvent,
 } from '@dnd-kit/core';
+import { createDndAnnouncements, dndScreenReaderInstructions } from '@/lib/dndA11y';
 import type { Habit } from '@/lib/types';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -65,6 +67,7 @@ export function HabitList({
   const [overId, setOverId] = useState<string | null>(null);
 
   const sensors = useSensors(
+    useSensor(KeyboardSensor),
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
@@ -104,12 +107,21 @@ export function HabitList({
     const overIdStr = String(over.id);
     if (!isContainer(overIdStr)) return;
     const target = parseContainer(overIdStr);
+    const habit = habits.find((h) => h.id === habitId);
+    if (!habit) return;
+    if (habit.categoryId === target.categoryId && (habit.subcategoryId ?? null) === target.subcategoryId) {
+      return;
+    }
     moveHabit(habitId, target.categoryId, target.subcategoryId);
   };
 
   return (
     <DndContext
       sensors={sensors}
+      accessibility={{
+        screenReaderInstructions: dndScreenReaderInstructions,
+        announcements: createDndAnnouncements((id) => habits.find((h) => h.id === id)?.name),
+      }}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}

@@ -80,6 +80,12 @@ export interface Exercise {
   sets: number;
   reps: number;
   weight: number; // кг
+  /** Дополнительные метрики для кардио (сохраняются в IndexedDB). */
+  incline?: number; // градусы
+  speed?: number; // км/ч
+  distance?: number; // км
+  duration?: number; // минуты
+  restTime?: number; // секунды между подходами
   note: string;
   order: number;
 }
@@ -89,6 +95,8 @@ export type TemplateExercise = Omit<Exercise, 'id' | 'workoutId'>;
 export interface WorkoutTemplate {
   id: ID;
   name: string;
+  /** Тип тренировки сохраняется, чтобы кардио-поля не скрывались после применения шаблона. */
+  type?: WorkoutType;
   exercises: TemplateExercise[];
 }
 

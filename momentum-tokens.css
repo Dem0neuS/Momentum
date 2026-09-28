@@ -1,0 +1,343 @@
+/* ============================================================
+   Momentum · дизайн-токены
+   ------------------------------------------------------------
+   Тема задаётся атрибутом <html data-theme="light|dark|system">.
+   Значения по умолчанию соответствуют светлой теме. Смена темы
+   меняет только CSS-переменные и не затрагивает данные IndexedDB.
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+
+  /* --- Бренд: фиолетово-синий ---------------------------------- */
+  --brand-gradient-start: #7C5CFF;
+  --brand-gradient-end: #4A8CFF;
+  --brand-50: #F1EEFF;
+  --brand-100: #E4DEFF;
+  --brand-300: #B7A5FF;
+  --brand-400: #8A70FF;
+  --brand-500: #6C4DF6;
+  --brand-600: #5636E0;
+  --brand-700: #4326B8;
+  --flow-400: #6FA6FF;
+  --flow-500: #4A8CFF;
+  --flow-600: #3B7BF0;
+
+  /* RGB-каналы нужны Tailwind-модификаторам вида bg-card/60. */
+  --brand-rgb: 108 77 246;
+  --flow-rgb: 74 140 255;
+  --primary-ink: #6C4DF6;
+  --primary-ink-rgb: 108 77 246;
+  --navy: #0A0C12;
+  --navy-rgb: 10 12 18;
+  /* Контрастный текст/иконки поверх брендовой и статусной заливки. */
+  --on-brand: #FFFFFF;
+  --on-brand-rgb: 255 255 255;
+  --on-solid: #0A0C12;
+  --on-solid-rgb: 10 12 18;
+
+  /* --- Градиенты: hero, CTA, активная навигация, прогресс ----- */
+  --grad-brand: linear-gradient(135deg, var(--brand-gradient-start) 0%, var(--brand-gradient-end) 100%);
+  --grad-hero-dark: linear-gradient(135deg, rgba(124, 92, 255, .24) 0%, rgba(74, 140, 255, .14) 100%);
+  --grad-hero-light: linear-gradient(135deg, rgba(124, 92, 255, .14) 0%, rgba(74, 140, 255, .08) 100%);
+  --grad-hero: var(--grad-hero-light);
+
+  /* --- Семантика состояний ------------------------------------ */
+  --done: #2FD07E;
+  --done-rgb: 47 208 126;
+  --done-ink: #0B7241;
+  --done-ink-rgb: 11 114 65;
+  --done-soft: rgba(47, 208, 126, .14);
+
+  --skip: #F2B44C;
+  --skip-rgb: 242 180 76;
+  --skip-ink: #8A5A0F;
+  --skip-ink-rgb: 138 90 15;
+  --skip-soft: rgba(242, 180, 76, .14);
+
+  /* Warning и skip имеют общий базовый оттенок, но разные состояния. */
+  --warning: #F2B44C;
+  --warning-rgb: 242 180 76;
+  --warning-ink: #8A5A0F;
+  --warning-ink-rgb: 138 90 15;
+  --warning-soft: rgba(242, 180, 76, .14);
+
+  --miss: #7A8398;
+  --miss-rgb: 122 131 152;
+
+  --danger: #FF5D6C;
+  --danger-rgb: 255 93 108;
+  --danger-ink: #C22C3D;
+  --danger-ink-rgb: 194 44 61;
+  --danger-soft: rgba(255, 93, 108, .14);
+
+  --strength: #A78BFA;
+  --strength-rgb: 167 139 250;
+  --strength-ink: #6D3BD1;
+  --strength-ink-rgb: 109 59 209;
+  --strength-soft: rgba(167, 139, 250, .14);
+
+  --cardio: #38BDF8;
+  --cardio-rgb: 56 189 248;
+  --cardio-ink: #07688C;
+  --cardio-ink-rgb: 7 104 140;
+  --cardio-soft: rgba(56, 189, 248, .14);
+
+  --stretch: #34D399;
+  --stretch-rgb: 52 211 153;
+  --stretch-ink: #087A5B;
+  --stretch-ink-rgb: 8 122 91;
+  --stretch-soft: rgba(52, 211, 153, .14);
+
+  --other: #94A3B8;
+  --other-rgb: 148 163 184;
+  --other-ink: #526075;
+  --other-ink-rgb: 82 96 117;
+  --other-soft: rgba(148, 163, 184, .14);
+
+  --info: #60A5FA;
+  --info-rgb: 96 165 250;
+  --info-ink: #1D64B8;
+  --info-ink-rgb: 29 100 184;
+  --info-soft: rgba(96, 165, 250, .14);
+
+  /* --- Поверхности и текст: светлая тема ---------------------- */
+  --bg: #F5F6FA;
+  --bg-rgb: 245 246 250;
+  --surface: #FFFFFF;
+  --surface-rgb: 255 255 255;
+  --surface-2: #EFF2F8;
+  --surface-2-rgb: 239 242 248;
+  --surface-3: #E7EBF4;
+  --surface-3-rgb: 231 235 244;
+  --border: #E1E5EF;
+  --border-rgb: 225 229 239;
+  --border-strong: #CDD4E3;
+  --border-strong-rgb: 205 212 227;
+  --text: #101420;
+  --text-rgb: 16 20 32;
+  --text-muted: #5A6478;
+  --text-muted-rgb: 90 100 120;
+  --text-dim: #5F6673;
+  --text-dim-rgb: 95 102 115;
+
+  /* --- Системные цвета интерфейса ----------------------------- */
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand-500);
+  --shadow-card: 0 1px 2px rgba(16, 20, 32, .04), 0 8px 24px rgba(16, 20, 32, .06);
+  --shadow-pop: 0 12px 32px rgba(16, 20, 32, .14);
+  --border-card: 1px solid var(--border);
+  --overlay: rgba(16, 20, 32, .45);
+
+  /* --- Радиусы ------------------------------------------------ */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+  --r-2xl: 28px;
+  --r-3xl: 32px;
+  --r-pill: 999px;
+
+  /* --- Сетка 4 px --------------------------------------------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-12: 48px;
+
+  /* --- Touch и размеры компонентов ---------------------------- */
+  --tap-min: 44px;
+  --habit-circle: 44px;
+  --list-row: 56px;
+  --input-h: 44px;
+  --nav-item-h: 56px;
+  --header-h: 56px;
+
+  /* --- Типографика -------------------------------------------- */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --fs-display: 32px;
+  --lh-display: 40px;
+  --fw-display: 800;
+  --fs-h1: 24px;
+  --lh-h1: 32px;
+  --fw-h1: 700;
+  --fs-h2: 20px;
+  --lh-h2: 28px;
+  --fw-h2: 700;
+  --fs-h3: 16px;
+  --lh-h3: 24px;
+  --fw-h3: 600;
+  --fs-body: 15px;
+  --lh-body: 22px;
+  --fw-body: 400;
+  --fs-body-strong: 15px;
+  --fw-body-strong: 600;
+  --fs-caption: 13px;
+  --lh-caption: 18px;
+  --fw-caption: 500;
+  --fs-micro: 11px;
+  --lh-micro: 14px;
+  --fw-micro: 700;
+  --track-micro: .08em;
+
+  /* --- Движение ------------------------------------------------ */
+  --dur-micro: 120ms;
+  --dur-base: 180ms;
+  --dur-panel: 260ms;
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* --- Аналитика и heatmap ------------------------------------ */
+  --heat-0: var(--surface-2);
+  --heat-1: rgba(47, 208, 126, .26);
+  --heat-2: rgba(47, 208, 126, .48);
+  --heat-3: rgba(47, 208, 126, .74);
+  --heat-4: var(--done);
+  --chart-grid: var(--border);
+  --chart-series-1: var(--brand-500);
+  --chart-series-2: var(--flow-500);
+  --chart-series-3: var(--done);
+  --chart-series-4: var(--skip);
+  --chart-series-5: var(--cardio);
+
+  /* --- Таблицы ------------------------------------------------- */
+  --cell-border: var(--border);
+  --cell-bg: var(--surface);
+  --cell-bg-alt: var(--surface-2);
+  --cell-head-bg: var(--surface-2);
+  --cell-selected: rgba(108, 77, 246, .12);
+}
+
+/* ============================================================
+   ТЁМНАЯ ТЕМА
+   ============================================================ */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0A0C12;
+  --bg-rgb: 10 12 18;
+  --surface: #11141D;
+  --surface-rgb: 17 20 29;
+  --surface-2: #171B26;
+  --surface-2-rgb: 23 27 38;
+  --surface-3: #1E2331;
+  --surface-3-rgb: 30 35 49;
+  --border: #262B38;
+  --border-rgb: 38 43 56;
+  --border-strong: #333A4A;
+  --border-strong-rgb: 51 58 74;
+  --text: #EEF0F6;
+  --text-rgb: 238 240 246;
+  --text-muted: #98A1B5;
+  --text-muted-rgb: 152 161 181;
+  --text-dim: #828C9F;
+  --text-dim-rgb: 130 140 159;
+
+  --primary-ink: #B7A5FF;
+  --primary-ink-rgb: 183 165 255;
+
+  --done-ink: #6FE0AC;
+  --done-ink-rgb: 111 224 172;
+  --skip-ink: #F5C877;
+  --skip-ink-rgb: 245 200 119;
+  --warning-ink: #F5C877;
+  --warning-ink-rgb: 245 200 119;
+  --danger-ink: #FF8B96;
+  --danger-ink-rgb: 255 139 150;
+  --strength-ink: #C4B5FD;
+  --strength-ink-rgb: 196 181 253;
+  --cardio-ink: #7DD3FC;
+  --cardio-ink-rgb: 125 211 252;
+  --stretch-ink: #6EE7B7;
+  --stretch-ink-rgb: 110 231 183;
+  --stretch-soft: rgba(52, 211, 153, .16);
+  --other-ink: #B6C0D1;
+  --other-ink-rgb: 182 192 209;
+  --other-soft: rgba(148, 163, 184, .16);
+  --info-ink: #93C5FD;
+  --info-ink-rgb: 147 197 253;
+  --info-soft: rgba(96, 165, 250, .16);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .35);
+  --shadow-pop: 0 18px 44px rgba(0, 0, 0, .55);
+  --grad-hero: var(--grad-hero-dark);
+  --overlay: rgba(5, 6, 10, .6);
+  --heat-0: #1A1F2B;
+  --chart-grid: #1A1F2B;
+  --cell-head-bg: #171B26;
+  --cell-selected: rgba(124, 92, 255, .22);
+}
+
+/* Системная тема следует ОС только в режиме system. */
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    color-scheme: dark;
+
+    --bg: #0A0C12;
+    --bg-rgb: 10 12 18;
+    --surface: #11141D;
+    --surface-rgb: 17 20 29;
+    --surface-2: #171B26;
+    --surface-2-rgb: 23 27 38;
+    --surface-3: #1E2331;
+    --surface-3-rgb: 30 35 49;
+    --border: #262B38;
+    --border-rgb: 38 43 56;
+    --border-strong: #333A4A;
+    --border-strong-rgb: 51 58 74;
+    --text: #EEF0F6;
+    --text-rgb: 238 240 246;
+    --text-muted: #98A1B5;
+    --text-muted-rgb: 152 161 181;
+    --text-dim: #828C9F;
+    --text-dim-rgb: 130 140 159;
+
+    --primary-ink: #B7A5FF;
+    --primary-ink-rgb: 183 165 255;
+
+    --done-ink: #6FE0AC;
+    --done-ink-rgb: 111 224 172;
+    --skip-ink: #F5C877;
+    --skip-ink-rgb: 245 200 119;
+    --warning-ink: #F5C877;
+    --warning-ink-rgb: 245 200 119;
+    --danger-ink: #FF8B96;
+    --danger-ink-rgb: 255 139 150;
+    --strength-ink: #C4B5FD;
+    --strength-ink-rgb: 196 181 253;
+    --cardio-ink: #7DD3FC;
+    --cardio-ink-rgb: 125 211 252;
+    --stretch-ink: #6EE7B7;
+    --stretch-ink-rgb: 110 231 183;
+    --stretch-soft: rgba(52, 211, 153, .16);
+    --other-ink: #B6C0D1;
+    --other-ink-rgb: 182 192 209;
+    --other-soft: rgba(148, 163, 184, .16);
+    --info-ink: #93C5FD;
+    --info-ink-rgb: 147 197 253;
+    --info-soft: rgba(96, 165, 250, .16);
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 28px rgba(0, 0, 0, .35);
+    --shadow-pop: 0 18px 44px rgba(0, 0, 0, .55);
+    --grad-hero: var(--grad-hero-dark);
+    --overlay: rgba(5, 6, 10, .6);
+    --heat-0: #1A1F2B;
+    --chart-grid: #1A1F2B;
+    --cell-head-bg: #171B26;
+    --cell-selected: rgba(124, 92, 255, .22);
+  }
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    color-scheme: light;
+  }
+}

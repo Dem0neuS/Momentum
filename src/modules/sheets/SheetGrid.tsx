@@ -151,11 +151,11 @@ export function SheetGrid({
                 fontStyle: style?.italic ? 'italic' : undefined,
                 textAlign: style?.align ?? 'left',
                 backgroundColor: isFormula
-                  ? 'rgba(139,92,246,0.08)'
+                  ? 'var(--cell-selected)'
                   : style?.bg
                     ? `${style.bg}40`
                     : undefined,
-                color: style?.color ?? (isFormula ? '#8B5CF6' : undefined),
+                color: style?.color ?? (isFormula ? 'var(--brand-500)' : undefined),
               }}
             >
               {isEditing ? (
@@ -308,7 +308,7 @@ export function SheetGrid({
       </div>
 
       {/* Таблица */}
-      <div className="overflow-auto rounded-xl border border-border/60 bg-card shadow-soft">
+      <div className="overflow-auto rounded-md border border-border/70 bg-card shadow-card">
         <table className="border-separate border-spacing-0" style={{ width: table.getTotalSize() }}>
           <thead>
             {table.getHeaderGroups().map((hg) => (

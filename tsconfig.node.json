@@ -14,5 +14,5 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false
   },
-  "include": ["vite.config.ts", "scripts"]
+  "include": ["vite.config.ts", "tailwind.config.tokens.ts", "scripts"]
 }

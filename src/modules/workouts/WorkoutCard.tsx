@@ -29,6 +29,8 @@ export function WorkoutCard({
 
   const meta = WORKOUT_TYPE_META[workout.type];
   const totalSets = exercises.reduce((a, e) => a + e.sets, 0);
+  const totalDistance = exercises.reduce((a, e) => a + (e.distance ?? 0), 0);
+  const totalDuration = exercises.reduce((a, e) => a + (e.duration ?? 0), 0);
 
   return (
     <motion.div
@@ -37,7 +39,7 @@ export function WorkoutCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
       className={cn(
-        'group relative rounded-xl border bg-card p-2.5 shadow-soft transition-all hover:z-20 focus-within:z-20',
+        'group relative rounded-lg border border-border/70 bg-card p-2.5 shadow-card transition-all hover:z-20 focus-within:z-20',
         workout.completed && 'border-transparent bg-muted/50 opacity-75',
         highlight && 'ring-1 ring-primary/40',
       )}
@@ -57,9 +59,9 @@ export function WorkoutCard({
             vibrate(10);
           }}
           className={cn(
-            'mt-0.5 order-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all active:scale-90',
+            'relative mt-0.5 order-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all before:absolute before:-inset-2.5 before:content-[""] active:scale-90',
             workout.completed
-              ? 'border-transparent bg-gradient-to-br from-violet-500 to-blue-500 text-white'
+              ? 'border-transparent bg-brand text-on-brand'
               : 'border-border/80 text-transparent hover:border-primary/50',
           )}
           aria-label={workout.completed ? 'Снять отметку' : 'Отметить выполненной'}
@@ -88,7 +90,7 @@ export function WorkoutCard({
             </p>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium" style={{ color: meta.color, backgroundColor: `${meta.color}18` }}>
+            <span className="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 font-medium" style={{ color: meta.ink, backgroundColor: meta.soft }}>
               {meta.label}
             </span>
             {exercises.length > 0 && (
@@ -97,7 +99,9 @@ export function WorkoutCard({
                 {exercises.length} упр.
               </span>
             )}
-            {totalSets > 0 && <span>· {totalSets} подходов</span>}
+            {workout.type !== 'cardio' && totalSets > 0 && <span>· {totalSets} подходов</span>}
+            {workout.type === 'cardio' && totalDistance > 0 && <span>· {formatMetric(totalDistance)} км</span>}
+            {workout.type === 'cardio' && totalDuration > 0 && <span>· {formatMetric(totalDuration)} мин</span>}
           </div>
         </button>
 
@@ -107,7 +111,7 @@ export function WorkoutCard({
           trigger={
             <button
               type="button"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground/60 opacity-70 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 opacity-70 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:h-9 sm:w-9"
               aria-label={`Открыть действия с тренировкой «${workout.name}»`}
               title="Открыть действия"
             >
@@ -138,16 +142,16 @@ export function WorkoutCard({
       </div>
 
       {cancelOpen && (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-skip/10 px-2 py-1.5 text-xs">
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-skip-soft px-2 py-1.5 text-xs">
           <span>Убрать тренировку на {formatDayKeyShort(workout.date)}?</span>
           <div className="flex shrink-0 gap-1">
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setCancelOpen(false)}>
+            <Button size="sm" variant="ghost" className="h-11 px-3 text-xs sm:h-7 sm:px-2" onClick={() => setCancelOpen(false)}>
               Оставить
             </Button>
             <Button
               size="sm"
               variant="destructive"
-              className="h-7 px-2 text-xs"
+              className="h-11 px-3 text-xs sm:h-7 sm:px-2"
               onClick={() => {
                 cancelWorkout(workout.id);
                 setCancelOpen(false);
@@ -160,16 +164,16 @@ export function WorkoutCard({
       )}
 
       {confirmOpen && (
-        <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-destructive/10 px-2 py-1.5 text-xs">
-          <span className="text-destructive">Удалить тренировку?</span>
+        <div className="mt-2 flex items-center justify-between gap-2 rounded-md bg-danger-soft px-2 py-1.5 text-xs">
+          <span className="text-danger-ink">Удалить тренировку?</span>
           <div className="flex gap-1">
-            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setConfirmOpen(false)}>
+            <Button size="sm" variant="ghost" className="h-11 px-3 text-xs sm:h-7 sm:px-2" onClick={() => setConfirmOpen(false)}>
               Отмена
             </Button>
             <Button
               size="sm"
               variant="destructive"
-              className="h-7 px-2 text-xs"
+              className="h-11 px-3 text-xs sm:h-7 sm:px-2"
               onClick={() => {
                 deleteWorkout(workout.id);
                 setConfirmOpen(false);
@@ -182,4 +186,8 @@ export function WorkoutCard({
       )}
     </motion.div>
   );
+}
+
+function formatMetric(value: number): string {
+  return value.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
 }

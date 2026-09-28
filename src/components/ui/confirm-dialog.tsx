@@ -23,25 +23,30 @@ export function ConfirmDialog({
   onConfirm,
 }: ConfirmDialogProps) {
   return (
-    <Dialog open={open} onClose={onClose} size="sm">
-      <div className="space-y-1 py-1">
-        <h3 className="text-base font-semibold">{title}</h3>
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
-      <div className="mt-5 flex justify-end gap-2">
-        <Button variant="outline" onClick={onClose}>
-          {cancelLabel}
-        </Button>
-        <Button
-          variant={danger ? 'destructive' : 'default'}
-          onClick={() => {
-            onConfirm();
-            onClose();
-          }}
-        >
-          {confirmLabel}
-        </Button>
-      </div>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="sm"
+      title={title}
+      ariaLabel={title}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            {cancelLabel}
+          </Button>
+          <Button
+            variant={danger ? 'destructive' : 'default'}
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      }
+    >
+      <p className="text-sm text-muted-foreground">{message}</p>
     </Dialog>
   );
 }

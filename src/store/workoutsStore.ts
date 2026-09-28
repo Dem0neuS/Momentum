@@ -5,6 +5,15 @@ import { dayKey, formatDayKeyShort, parseDayKey } from '@/lib/dates';
 import { nowIso, uid } from '@/lib/utils';
 import { toastSimple, toastWithUndo } from '@/lib/toast';
 
+function hasCardioMetrics(exercise: Partial<Exercise>): boolean {
+  return (
+    exercise.incline !== undefined ||
+    exercise.speed !== undefined ||
+    exercise.distance !== undefined ||
+    exercise.duration !== undefined
+  );
+}
+
 export interface WorkoutInput {
   name: string;
   date: string;
@@ -191,6 +200,11 @@ export const useWorkoutsStore = create<WorkoutsState>((set, get) => ({
       sets: partial?.sets ?? 3,
       reps: partial?.reps ?? 10,
       weight: partial?.weight ?? 0,
+      ...(partial?.incline !== undefined ? { incline: partial.incline } : {}),
+      ...(partial?.speed !== undefined ? { speed: partial.speed } : {}),
+      ...(partial?.distance !== undefined ? { distance: partial.distance } : {}),
+      ...(partial?.duration !== undefined ? { duration: partial.duration } : {}),
+      ...(partial?.restTime !== undefined ? { restTime: partial.restTime } : {}),
       note: partial?.note ?? '',
       order,
     };
@@ -241,8 +255,27 @@ export const useWorkoutsStore = create<WorkoutsState>((set, get) => ({
     const exs = sourceExercises
       .slice()
       .sort((a, b) => a.order - b.order)
-      .map((e, i): TemplateExercise => ({ name: e.name, sets: e.sets, reps: e.reps, weight: e.weight, note: e.note, order: i }));
-    const tpl: WorkoutTemplate = { id: uid(), name: name?.trim() || w?.name || 'Шаблон', exercises: exs };
+      .map(
+        (e, i): TemplateExercise => ({
+          name: e.name,
+          sets: e.sets,
+          reps: e.reps,
+          weight: e.weight,
+          ...(e.incline !== undefined ? { incline: e.incline } : {}),
+          ...(e.speed !== undefined ? { speed: e.speed } : {}),
+          ...(e.distance !== undefined ? { distance: e.distance } : {}),
+          ...(e.duration !== undefined ? { duration: e.duration } : {}),
+          ...(e.restTime !== undefined ? { restTime: e.restTime } : {}),
+          note: e.note,
+          order: i,
+        }),
+      );
+    const tpl: WorkoutTemplate = {
+      id: uid(),
+      name: name?.trim() || w?.name || 'Шаблон',
+      ...(w?.type ? { type: w.type } : {}),
+      exercises: exs,
+    };
     set({ templates: [...s.templates, tpl] });
     void db.workoutTemplates.put(tpl);
     toastSimple('Шаблон сохранён', tpl.name);
@@ -257,7 +290,7 @@ export const useWorkoutsStore = create<WorkoutsState>((set, get) => ({
       id,
       name: tpl.name,
       date,
-      type: 'strength',
+      type: tpl.type ?? (tpl.exercises.some(hasCardioMetrics) ? 'cardio' : 'strength'),
       notes: '',
       completed: false,
     };
@@ -268,6 +301,11 @@ export const useWorkoutsStore = create<WorkoutsState>((set, get) => ({
       sets: e.sets,
       reps: e.reps,
       weight: e.weight,
+      ...(e.incline !== undefined ? { incline: e.incline } : {}),
+      ...(e.speed !== undefined ? { speed: e.speed } : {}),
+      ...(e.distance !== undefined ? { distance: e.distance } : {}),
+      ...(e.duration !== undefined ? { duration: e.duration } : {}),
+      ...(e.restTime !== undefined ? { restTime: e.restTime } : {}),
       note: e.note ?? '',
       order: i,
     }));

@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react';
 import {
   DndContext,
+  KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { CalendarDays, ChevronLeft, ChevronRight, Forward, History } from 'lucide-react';
 import { useDayPlanStore } from '@/store/dayPlanStore';
 import { addDays, dayKey, formatDayTitle, todayKey } from '@/lib/dates';
+import { createDndAnnouncements, dndScreenReaderInstructions } from '@/lib/dndA11y';
 import { Button } from '@/components/ui/button';
 import { ProgressRing } from '@/components/ProgressRing';
 import { Input } from '@/components/ui/input';
@@ -50,6 +53,7 @@ export function DayPlanPage() {
   const isPast = date < todayKey();
 
   const sensors = useSensors(
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
@@ -97,7 +101,15 @@ export function DayPlanPage() {
           <h1 className="text-2xl font-bold">План 3-2-1</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">{formatDayTitle(new Date(date + 'T12:00:00'))}</p>
         </div>
-        <ProgressRing size={56} stroke={5} progress={pr.pct} color="#8B5CF6" glow>
+        <ProgressRing
+          size={56}
+          stroke={5}
+          progress={pr.pct}
+          gradient
+          glow
+          label="Прогресс плана"
+          valueText={`${pr.done} из ${pr.total}`}
+        >
           <span className="text-xs font-bold">
             {pr.total > 0 ? Math.round(pr.pct * 100) : 0}%
           </span>
@@ -115,7 +127,8 @@ export function DayPlanPage() {
             type="date"
             value={date}
             onChange={(e) => e.target.value && setDate(e.target.value)}
-            className="h-8 w-40 rounded-lg text-xs"
+            className="w-40 rounded-md text-xs"
+            aria-label="Дата плана"
           />
         </div>
         {!isToday && (
@@ -147,7 +160,7 @@ export function DayPlanPage() {
 
       {/* История */}
       {historyOpen && (
-        <div className="rounded-2xl border border-border/60 bg-card p-3 shadow-soft">
+        <div className="rounded-lg border border-border/70 bg-card p-3 shadow-card">
           <p className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Прошедшие дни
           </p>
@@ -159,12 +172,13 @@ export function DayPlanPage() {
               return (
                 <button
                   key={d}
+                  type="button"
                   onClick={() => {
                     setDate(d);
                     setHistoryOpen(false);
                   }}
                   className={cn(
-                    'flex w-16 shrink-0 flex-col items-center gap-1 rounded-xl border border-border/50 p-2 transition-colors hover:bg-accent',
+                    'flex min-h-tap w-16 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-border/60 p-2 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60',
                     date === d && 'border-primary/50 bg-primary/5',
                   )}
                 >
@@ -172,7 +186,7 @@ export function DayPlanPage() {
                   <span className="text-[10px] text-muted-foreground">
                     {dd.toLocaleDateString('ru-RU', { month: 'short' })}
                   </span>
-                  <span className={cn('text-[11px] font-medium', prog.total > 0 && prog.pct >= 1 ? 'text-success' : 'text-muted-foreground')}>
+                  <span className={cn('text-[11px] font-medium', prog.total > 0 && prog.pct >= 1 ? 'text-success-ink' : 'text-muted-foreground')}>
                     {prog.done}/{prog.total}
                   </span>
                 </button>
@@ -184,7 +198,16 @@ export function DayPlanPage() {
 
       {/* Блоки */}
       {plan && (
-        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          accessibility={{
+            screenReaderInstructions: dndScreenReaderInstructions,
+            announcements: createDndAnnouncements(
+              (id) => planItems.find((i) => i.id === id)?.text,
+            ),
+          }}
+          onDragEnd={onDragEnd}
+        >
           <div className="space-y-4">
             <PlanBlock plan={plan} block="main" items={byBlock('main')} />
             <PlanBlock plan={plan} block="medium" items={byBlock('medium')} />

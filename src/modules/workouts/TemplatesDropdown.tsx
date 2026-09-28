@@ -24,7 +24,8 @@ export function TemplatesDropdown({
       align="end"
       trigger={
         <button
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/70 px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          type="button"
+          className="inline-flex min-h-tap items-center gap-1.5 rounded-lg border border-border/70 px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-8"
           aria-label="Шаблоны тренировок"
         >
           <Layers className="h-3.5 w-3.5" />

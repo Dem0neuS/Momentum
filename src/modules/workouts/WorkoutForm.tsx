@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   DndContext,
+  KeyboardSensor,
   PointerSensor,
   TouchSensor,
   closestCenter,
@@ -11,6 +12,7 @@ import {
 import {
   SortableContext,
   arrayMove,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -26,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { TemplatesDropdown } from './TemplatesDropdown';
 import { uid } from '@/lib/utils';
+import { createDndAnnouncements, dndScreenReaderInstructions } from '@/lib/dndA11y';
 
 export function WorkoutForm({
   open,
@@ -69,6 +72,7 @@ export function WorkoutForm({
   }, [open, workout, defaultDate, exercises]);
 
   const sensors = useSensors(
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
   );
@@ -83,6 +87,11 @@ export function WorkoutForm({
         sets: partial?.sets ?? 3,
         reps: partial?.reps ?? 10,
         weight: partial?.weight ?? 0,
+        ...(partial?.incline !== undefined ? { incline: partial.incline } : {}),
+        ...(partial?.speed !== undefined ? { speed: partial.speed } : {}),
+        ...(partial?.distance !== undefined ? { distance: partial.distance } : {}),
+        ...(partial?.duration !== undefined ? { duration: partial.duration } : {}),
+        ...(partial?.restTime !== undefined ? { restTime: partial.restTime } : {}),
         note: partial?.note ?? '',
         order: current.length,
       },
@@ -91,6 +100,10 @@ export function WorkoutForm({
 
   const applyTemplate = (template: WorkoutTemplate) => {
     if (!workout && !name.trim()) setName(template.name);
+    const templateType =
+      template.type ??
+      (template.exercises.some(hasCardioMetrics) ? 'cardio' : undefined);
+    if (templateType) setType(templateType);
     setDraftExercises((current) => [
       ...current,
       ...template.exercises.map((e, i) => ({
@@ -100,6 +113,11 @@ export function WorkoutForm({
         sets: e.sets,
         reps: e.reps,
         weight: e.weight,
+        ...(e.incline !== undefined ? { incline: e.incline } : {}),
+        ...(e.speed !== undefined ? { speed: e.speed } : {}),
+        ...(e.distance !== undefined ? { distance: e.distance } : {}),
+        ...(e.duration !== undefined ? { duration: e.duration } : {}),
+        ...(e.restTime !== undefined ? { restTime: e.restTime } : {}),
         note: e.note ?? '',
         order: current.length + i,
       })),
@@ -161,16 +179,17 @@ export function WorkoutForm({
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Название</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Например, Грудь + трицепс" />
+            <label htmlFor="workout-name" className="text-xs font-medium text-muted-foreground">Название</label>
+            <Input id="workout-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Например, Грудь + трицепс" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Дата</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <label htmlFor="workout-date" className="text-xs font-medium text-muted-foreground">Дата</label>
+            <Input id="workout-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Тип</label>
+            <label htmlFor="workout-type" className="text-xs font-medium text-muted-foreground">Тип</label>
             <Select
+              id="workout-type"
               value={type}
               onChange={(e) => setType(e.target.value as WorkoutType)}
               options={WORKOUT_TYPES.map((t) => ({
@@ -181,8 +200,8 @@ export function WorkoutForm({
             />
           </div>
           <div className="space-y-1.5 sm:col-span-2">
-            <label className="text-xs font-medium text-muted-foreground">Заметки</label>
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Необязательно" />
+            <label htmlFor="workout-notes" className="text-xs font-medium text-muted-foreground">Заметки</label>
+            <Input id="workout-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Необязательно" />
           </div>
         </div>
 
@@ -212,7 +231,17 @@ export function WorkoutForm({
             </p>
           )}
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            accessibility={{
+              screenReaderInstructions: dndScreenReaderInstructions,
+              announcements: createDndAnnouncements(
+                (id) => draftExercises.find((e) => e.id === id)?.name,
+              ),
+            }}
+            onDragEnd={onDragEnd}
+          >
             <SortableContext items={draftExercises.map((e) => e.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
                 {draftExercises.map((ex, i) => (
@@ -220,6 +249,7 @@ export function WorkoutForm({
                     key={ex.id}
                     ex={ex}
                     index={i}
+                    type={type}
                     onUpdate={(patch) => updateDraftExercise(ex.id, patch)}
                     onDelete={() => deleteDraftExercise(ex.id)}
                   />
@@ -233,14 +263,25 @@ export function WorkoutForm({
   );
 }
 
+function hasCardioMetrics(exercise: Partial<Exercise>): boolean {
+  return (
+    exercise.incline !== undefined ||
+    exercise.speed !== undefined ||
+    exercise.distance !== undefined ||
+    exercise.duration !== undefined
+  );
+}
+
 function ExerciseRow({
   ex,
   index,
+  type,
   onUpdate,
   onDelete,
 }: {
   ex: Exercise;
   index: number;
+  type: WorkoutType;
   onUpdate: (patch: Partial<Exercise>) => void;
   onDelete: () => void;
 }) {
@@ -250,45 +291,99 @@ function ExerciseRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 20 : undefined }}
-      className="flex items-start gap-2 rounded-xl border border-border/60 bg-background/40 p-2.5"
+      className="flex items-start gap-2 rounded-lg border border-border/70 bg-background/40 p-2.5"
     >
-      <button {...attributes} {...listeners} className="mt-4 cursor-grab touch-none rounded p-1 text-muted-foreground/50 hover:text-foreground" aria-label="Переместить упражнение">
+      <button {...attributes} {...listeners} data-drag-handle className="mt-3 flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground/50 hover:bg-accent hover:text-foreground sm:mt-4 sm:h-8 sm:w-8" aria-label={`Переместить «${ex.name || 'упражнение'}»`}>
         <GripVertical className="h-4 w-4" />
       </button>
       <div className="flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-blue-500 text-[10px] font-bold text-white">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary-ink">
             {index + 1}
           </span>
           <Input
-            className="h-8 flex-1 rounded-lg text-sm"
+            className="h-field flex-1 rounded-md text-sm sm:h-8"
             value={ex.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
             placeholder="Название упражнения"
           />
         </div>
-        <div className="grid grid-cols-3 gap-2">
-          <NumberField label="Подходы" value={ex.sets} onChange={(v) => onUpdate({ sets: v })} />
-          <NumberField label="Повтор." value={ex.reps} onChange={(v) => onUpdate({ reps: v })} />
-          <NumberField label="Вес, кг" value={ex.weight} onChange={(v) => onUpdate({ weight: v })} allowFloat />
-        </div>
+        {type === 'cardio' ? (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <NumberField
+              label="Угол наклона, °"
+              value={ex.incline ?? 0}
+              onChange={(v) => onUpdate({ incline: v })}
+              allowFloat
+              step={0.1}
+            />
+            <NumberField
+              label="Скорость, км/ч"
+              value={ex.speed ?? 0}
+              onChange={(v) => onUpdate({ speed: v })}
+              allowFloat
+              step={0.1}
+            />
+            <NumberField
+              label="Расстояние, км"
+              value={ex.distance ?? 0}
+              onChange={(v) => onUpdate({ distance: v })}
+              allowFloat
+              step={0.01}
+            />
+            <NumberField
+              label="Время, мин"
+              value={ex.duration ?? 0}
+              onChange={(v) => onUpdate({ duration: v })}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <NumberField label="Подходы" value={ex.sets} onChange={(v) => onUpdate({ sets: v })} />
+            <NumberField label="Повтор." value={ex.reps} onChange={(v) => onUpdate({ reps: v })} />
+            <NumberField label="Вес, кг" value={ex.weight} onChange={(v) => onUpdate({ weight: v })} allowFloat />
+            <NumberField
+              label="Отдых, сек"
+              value={ex.restTime ?? 0}
+              onChange={(v) => onUpdate({ restTime: v })}
+              step={15}
+            />
+          </div>
+        )}
       </div>
-      <button type="button" onClick={onDelete} className="rounded-lg p-1.5 text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive" aria-label="Удалить упражнение">
+      <button type="button" onClick={onDelete} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-danger-soft hover:text-danger-ink sm:h-8 sm:w-8" aria-label="Удалить упражнение">
         <Trash2 className="h-4 w-4" />
       </button>
     </div>
   );
 }
 
-function NumberField({ label, value, onChange, allowFloat }: { label: string; value: number; onChange: (v: number) => void; allowFloat?: boolean }) {
+function NumberField({
+  label,
+  value,
+  onChange,
+  allowFloat,
+  step,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  allowFloat?: boolean;
+  step?: number;
+}) {
+  const inputStep = step ?? (allowFloat ? 0.5 : 1);
+
   return (
     <div className="space-y-0.5">
-      <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="flex h-8 items-end text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
       <Input
         type="number"
         min={0}
-        step={allowFloat ? 0.5 : 1}
-        className="h-8 rounded-lg text-sm"
+        step={inputStep}
+        aria-label={label}
+        className="h-field rounded-md text-sm sm:h-8"
         value={Number.isFinite(value) ? value : 0}
         onChange={(e) => onChange(Math.max(0, parseFloat(e.target.value) || 0))}
       />
