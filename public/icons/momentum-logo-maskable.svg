@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="mTitle">
+  <title id="mTitle">Momentum</title>
+  <defs>
+    <linearGradient id="mGrad" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#7C5CFF"/>
+      <stop offset="0.55" stop-color="#6B84FF"/>
+      <stop offset="1" stop-color="#4A8CFF"/>
+    </linearGradient>
+  </defs>
+
+  <!--
+    Маскабл-версия: подложка во весь квадрат без скругления, кольцо остаётся
+    на 63% ширины. Внешний радиус кольца 161 из 256 — то есть 62,9%, он
+    укладывается в safe zone 80% (радиус 204,8), поэтому маска Android
+    (круг, вписанный в квадрат) знак не срежет.
+  -->
+  <rect width="512" height="512" fill="#0A0C12"/>
+
+  <circle cx="256" cy="256" r="142"
+          fill="none"
+          stroke="url(#mGrad)"
+          stroke-width="38"
+          stroke-linecap="round"
+          stroke-dasharray="62 49.53"
+          stroke-dashoffset="254.03"/>
+</svg>

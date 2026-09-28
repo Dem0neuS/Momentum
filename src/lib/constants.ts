@@ -176,6 +176,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   eveningReminder: true,
   collapsedCategories: {},
   onboarded: false,
+  profileName: '',
 };
 
 export const WEEKDAY_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];

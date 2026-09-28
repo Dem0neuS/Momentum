@@ -23,6 +23,10 @@ const manifest: Partial<ManifestOptions> = {
     { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
     { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    // Однотонный силуэт: Chrome рисует им тематическую панель, а Android —
+    // badge уведомлений. Цветную иконку туда скармливать нельзя: выйдет
+    // серый квадрат.
+    { src: '/icons/badge-512.png', sizes: '512x512', type: 'image/png', purpose: 'monochrome' },
   ],
   shortcuts: [
     {
@@ -86,7 +90,16 @@ export default defineConfig({
     cspMeta(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/apple-touch-icon.png', 'icons/favicon.svg'],
+      includeAssets: [
+        'icons/apple-touch-icon.png',
+        'icons/favicon.svg',
+        'icons/favicon-32.png',
+        'icons/icon-light-512.png',
+        'icons/momentum-logo.svg',
+        'icons/momentum-logo-light.svg',
+        'icons/momentum-logo-mono.svg',
+        'icons/momentum-logo-maskable.svg',
+      ],
       manifest,
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],

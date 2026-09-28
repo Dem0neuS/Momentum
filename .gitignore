@@ -8,6 +8,12 @@ dist
 dist-ssr
 *.local
 
+# Секреты кабинета. *.local выше покрывает .env.local, но правило с именем
+# явное: сюда попадают URL и anon-ключ Supabase, их нельзя коммитить.
+.env
+.env.*
+!.env.local.example
+
 # electron-builder
 release
 

@@ -179,6 +179,12 @@ export interface AppSettings {
   eveningReminder: boolean;
   collapsedCategories: Record<string, boolean>;
   onboarded: boolean;
+  /**
+   * Имя профиля для шапки «Профиль». Лежит в существующем хранилище
+   * настроек, а не в отдельной таблице: для одного текстового поля
+   * заводить таблицу и миграцию Dexie незачем.
+   */
+  profileName: string;
 }
 
 // ---------- Undo-история (память сессии) ----------

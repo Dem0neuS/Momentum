@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="mTitle">
+  <title id="mTitle">Momentum (монохром)</title>
+  <!--
+    Монохромный знак без подложки — для badge уведомлений, favicon-32 и печати.
+    Обводка наследует цвет текста (currentColor): на тёмном фоне задайте
+    color: #FFFFFF, на светлом — color: #0A0C12. Геометрия та же, что в основном логотипе.
+  -->
+  <circle cx="256" cy="256" r="142"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="38"
+          stroke-linecap="round"
+          stroke-dasharray="62 49.53"
+          stroke-dashoffset="254.03"/>
+</svg>

@@ -2,7 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 
 /** Вызов при клике вне элемента */
 export function useClickOutside<T extends HTMLElement>(onOutside: () => void, active = true) {
-  const ref = useRef<T | null>(null);
+  // В @types/react 18 вызов useRef<T | null>(null) попадает в перегрузку,
+  // возвращающую ref с readonly current. Нужен именно изменяемый:
+  // к нему цепляется callback-ref.
+  const ref = useRef<T | null>(null) as { current: T | null };
   useEffect(() => {
     if (!active) return;
     const handler = (e: MouseEvent | TouchEvent) => {

@@ -5,13 +5,14 @@ import { Header } from '@/components/Header';
 import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 import { SplashScreen, SPLASH_DURATION } from '@/components/SplashScreen';
-import { SettingsDialog } from '@/components/SettingsDialog';
+import { ProfileDialog } from '@/components/ProfileDialog';
 import { useUpdateToast } from '@/components/UpdateAppCard';
 import { initApp } from '@/lib/boot';
 import { useHistoryStore } from '@/store/historyStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useDayPlanStore } from '@/store/dayPlanStore';
+import { useAuthStore } from '@/store/authStore';
 import { useKeydown, useNow } from '@/lib/hooks';
 import { todayKey } from '@/lib/dates';
 import { rememberSection, sectionFromLocation } from '@/lib/deepLink';
@@ -35,7 +36,7 @@ export default function App() {
   const [section, setSection] = useState<SectionId>(() => sectionFromLocation(window.location.search) ?? 'dashboard');
   const [splash, setSplash] = useState(true);
   const [ready, setReady] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const remindAt = useMemo(() => {
     const d = new Date();
@@ -101,12 +102,21 @@ export default function App() {
   // Ctrl/Cmd+Z — глобальный undo (кроме полей ввода)
   useKeydown((e) => {
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z' || e.key === 'я' || e.key === 'Я')) {
+      // Поле имени профиля тоже пропускает отмену, но не по тегу: это обычный
+      // <input>, поэтому isEditableTarget его уже ловит. Отдельно важно, что
+      // имя не попадает в историю действий — тогда Ctrl+Z не перепишет его.
       if (isEditableTarget(e)) return;
       e.preventDefault();
       const undone = useHistoryStore.getState().undo();
       if (undone) toast.info('Действие отменено');
       else toast('Отменять нечего');
     }
+  }, []);
+
+  // Сессия кабинета восстанавливается один раз при старте, а не на каждом
+  // рендере: getSession ходит в хранилище, и звать его каждый раз — лишнее.
+  useEffect(() => {
+    void useAuthStore.getState().refresh();
   }, []);
 
   // Тост «Обновление готово» с кнопкой «Обновить» (только десктопная версия).
@@ -122,7 +132,7 @@ export default function App() {
         <Sidebar active={section} onNavigate={setSection} />
 
         <div className="md:pl-60">
-          <Header section={section} onOpenSettings={() => setSettingsOpen(true)} />
+          <Header section={section} onOpenProfile={() => setProfileOpen(true)} />
           <main className="mx-auto w-full max-w-5xl px-4 py-5">
             {/* Без AnimatePresence/exit — мгновенная смена раздела, только входная
                 анимация. Так навигация не блокируется застрявшим exit-кадром
@@ -140,7 +150,7 @@ export default function App() {
 
         <BottomNav active={section} onNavigate={setSection} />
 
-        <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
       </div>
     </MotionConfig>
   );
