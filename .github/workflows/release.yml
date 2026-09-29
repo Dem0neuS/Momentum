@@ -34,10 +34,24 @@ jobs:
         run: npm ci
 
       - name: Проверить типы и собрать фронтенд
+        # Ключи кабинета впечатываются в бандл на сборке. Публиковать релиз
+        # без них можно, но такой .exe не умеет вход, и исправить это можно
+        # будет только новой версией: electron-updater не умеет откат.
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: npm run build
 
-      - name: Показать версию
-        run: node -e "console.log('версия:', require('./package.json').version)"
+      - name: Проверить, настроен ли кабинет
+        env:
+          HAS_URL: ${{ secrets.VITE_SUPABASE_URL }}
+        run: |
+          node -e "console.log('версия:', require('./package.json').version)"
+          if [ -n "$HAS_URL" ]; then
+            echo "Кабинет в сборке настроен."
+          else
+            echo "::warning::Секрет VITE_SUPABASE_URL не задан — в .exe кабинет не работает, вместо форм входа будет подсказка."
+          fi
 
       - name: Собрать установщик
         # electron-builder дописывает в app-update.yml данные репозитория
