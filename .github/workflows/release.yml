@@ -58,12 +58,10 @@ jobs:
           fi
 
       - name: Убедиться, что тег релиза есть
-        # GitHub не создаёт релиз без существующего тега: 422 "Published
-        # releases must have a valid tag". electron-builder тег не создаёт —
-        # это умеет только git-провайдер, а здесь провайдер GitHub (API).
-        # На 1.0.1 из-за этого релиз остался с одним .blockmap: установщик,
-        # portable и latest.yml не загрузились, и обновлять было нечем.
-        # Тег ставим на тот же коммит, что и релиз.
+        # electron-builder публикует через API и сам тег не создаёт — это умеет
+        # только git-провайдер. Без тега POST /releases всё равно создаёт его
+        # из target_commitish, но полагаться на это нельзя: тег должен указывать
+        # ровно на тот коммит, из которого собраны файлы. Ставим его заранее.
         shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
@@ -77,11 +75,16 @@ jobs:
           fi
 
       - name: Собрать установщик и опубликовать
-        # Собираем ровно один раз за запуск. Раньше шагов было два — «с
-        # публикацией» и «без», — и оба выполнялись при publish=true:
-        # electron-builder создавал два черновика с одним тегом, а файлы
-        # установщика и latest.yml оказывались в разных релизах. Скачивание
-        # такое не находит, и electron-updater не видит обновления.
+        # Публикует ровно одна цель — nsis. electron-builder держит кэш
+        # publisher'ов по конфигурации публикации, и на nsis + portable их
+        # получается два: каждый создаёт релиз сам и в обоих случаях в лог
+        # идёт «creating GitHub release». Второй POST проигрывает гонку и
+        # получает 422 «Published releases must have a valid tag», потому что
+        # релиз и тег к этому моменту уже созданы первым. Побочный эффект хуже
+        # самой ошибки: загрузки от проигравшего отменяются, и релиз остаётся
+        # неполным. На 1.0.1 так потерялся .blockmap — без него
+        # electron-updater не может качать обновление частями.
+        # Portable поэтому собирается отдельно и догружается шагом ниже.
         #
         # electron-builder дописывает в app-update.yml данные репозитория
         # из секции build.publish — их читает electron-updater в приложении.
@@ -89,9 +92,24 @@ jobs:
         # черновиком: черновик не виден в releases/latest, на который
         # ведут кнопки страницы загрузки.
         if: ${{ inputs.publish }}
-        run: npx electron-builder --win --publish always
+        run: npx electron-builder --win nsis --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Собрать переносимую версию
+        # Без публикации: релиз к этому моменту уже создан предыдущим шагом.
+        if: ${{ inputs.publish }}
+        run: npx electron-builder --win portable --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Догрузить переносимую версию в релиз
+        if: ${{ inputs.publish }}
+        shell: bash
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          gh release upload "$TAG" release/Momentum-*-portable.exe --clobber --repo "$GITHUB_REPOSITORY"
+          echo "Переносимая версия добавлена в $TAG."
 
       - name: Собрать установщик без публикации
         if: ${{ !inputs.publish }}
