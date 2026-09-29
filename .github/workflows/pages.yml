@@ -1,0 +1,65 @@
+name: Веб-публикация
+
+# Публикация веб-версии на GitHub Pages. Запускается сама при пуше в master
+# и вручную кнопкой Run workflow.
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Два деплоя параллельно нельзя: вторая ветка выигрывает и оставляет сайт
+# на предыдущей версии. Ожидание нового — тоже.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Сборка веб-версии
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Установить зависимости
+        run: npm ci
+
+      - name: Собрать веб-версию
+        # Скрипт сам подставляет префикс /<имя репозитория>/ и проверяет
+        # результат: сборка с неверным префиксом успешна, но страница
+        # откроется пустой. Значения можно переопределить — CI делает это
+        # неявно, через GITHUB_REPOSITORY.
+        run: npm run build:web
+
+      - name: Загрузить артефакт
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Публикация
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

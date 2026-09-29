@@ -9,6 +9,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:web": "node scripts/build-web.mjs",
+    "verify:manifest": "node scripts/verify-manifest.mjs",
+    "supabase:check": "node scripts/check-supabase.mjs",
+    "qr": "node scripts/build-qr.mjs",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
     "electron:dev": "node scripts/electron-dev.mjs",
@@ -40,6 +44,7 @@
   },
   "devDependencies": {
     "@types/pngjs": "^6.0.5",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.2",
@@ -48,6 +53,7 @@
     "electron-builder": "^26.15.3",
     "pngjs": "^7.0.0",
     "postcss": "^8.4.47",
+    "qrcode": "^1.5.4",
     "tailwindcss": "^3.4.13",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "~5.6.2",

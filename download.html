@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0A0C12" />
+    <meta name="description" content="Скачать Momentum: приложение для компьютера и установка на телефон." />
+    <title>Momentum — скачать</title>
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%icons/favicon.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <style>
+      /* Страница загрузки намеренно автономна: это отдельный экран, а не
+         приложение. Тянуть сюда весь бандл ради трёх кнопок незачем, зато
+         страница открывается даже там, где основной скрипт ещё не загрузился. */
+      :root {
+        color-scheme: dark;
+        --bg: #0a0c12;
+        --card: #1a1f2b;
+        --border: #262b38;
+        --text: #e8eaf0;
+        --muted: #9aa1b1;
+        --grad: linear-gradient(135deg, #7c5cff, #4a8cff);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 32px 20px 56px;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.5 Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+      }
+      main { max-width: 560px; margin: 0 auto; }
+      header { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+      .mark {
+        width: 40px; height: 40px; border-radius: 30%;
+        background: var(--grad); flex: none;
+      }
+      h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+      .sub { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+      h2 { margin: 0 0 4px; font-size: 17px; }
+      p { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+      ol { margin: 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+      ol li + li { margin-top: 6px; }
+      a.btn, button.btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        min-height: 48px; padding: 0 18px; width: 100%;
+        border-radius: 10px; border: 1px solid var(--border);
+        background: #121722; color: var(--text);
+        font: 600 15px/1 inherit; text-decoration: none; cursor: pointer;
+      }
+      a.btn + a.btn, button.btn + button.btn { margin-top: 10px; }
+      /* Градиент только у главного действия — так же, как в самом приложении. */
+      .grad { background: var(--grad); border-color: transparent; color: #fff; }
+      .qr { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+      .qr img {
+        width: 168px; height: 168px; flex: none;
+        border-radius: 12px; background: #f5f6fa; padding: 8px;
+      }
+      .qr div { min-width: 0; }
+      code {
+        display: block; margin-top: 8px; padding: 8px 10px;
+        background: #121722; border: 1px solid var(--border); border-radius: 8px;
+        color: var(--text); font-size: 13px; word-break: break-all;
+      }
+      .note { font-size: 13px; color: var(--muted); }
+      .note strong { color: var(--text); font-weight: 600; }
+      footer { color: var(--muted); font-size: 13px; text-align: center; margin-top: 28px; }
+      footer a { color: var(--text); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="mark" aria-hidden="true"></div>
+        <div>
+          <h1>Momentum</h1>
+          <p class="sub">Привычки, тренировки, таблицы и план 3-2-1</p>
+        </div>
+      </header>
+
+      <!-- Телефон. Основной сценарий: открыть ссылку и добавить на главный экран. -->
+      <section>
+        <h2>На телефон</h2>
+        <p>Откройте ссылку и добавьте приложение на главный экран — оно работает без интернета.</p>
+        <div class="qr">
+          <!-- Отсканируйте камерой на компьютере, чтобы открыть эту же страницу на телефоне. -->
+          <img src="%BASE_URL%icons/qr-install.svg" alt="QR-код со ссылкой на Momentum" width="168" height="168" />
+          <div>
+            <p class="note">
+              <strong>Android.</strong> Откройте ссылку в Chrome, затем меню ⋮ →
+              «Установить приложение».
+            </p>
+            <p class="note" style="margin-top: 8px">
+              <strong>iPhone.</strong> Откройте ссылку в Safari, нажмите «Поделиться» →
+              «На экран “Домой”».
+            </p>
+            <code>%APP_URL%</code>
+          </div>
+        </div>
+        <a class="btn grad" href="%BASE_URL%" style="margin-top: 16px">Открыть Momentum</a>
+      </section>
+
+      <!-- Компьютер. Установщик и переносимая версия лежат в GitHub Releases. -->
+      <section>
+        <h2>На компьютер с Windows</h2>
+        <p>Установщик кладёт иконку на рабочий стол и в меню «Пуск».</p>
+        <a class="btn" href="%RELEASE_URL%" rel="noopener">Скачать установщик (.exe)</a>
+        <a class="btn" href="%RELEASE_URL%" rel="noopener">Переносимая версия — без установки</a>
+        <p class="note" style="margin-top: 12px">
+          Обе версии в одном релизе: установщик <code style="display: inline; padding: 2px 6px">setup</code>
+          и переносимая <code style="display: inline; padding: 2px 6px">portable</code>.
+          Windows может показать предупреждение о неизвестном издателе — это
+          ожидаемо для сборки без подписи.
+        </p>
+      </section>
+
+      <section>
+        <h2>Что с данными</h2>
+        <p class="note">
+          Всё хранится на вашем устройстве в браузере. Ничего не отправляется на
+          сервер, пока вы сами не включите кабинет. Экспорт в JSON делает
+          резервную копию целиком.
+        </p>
+      </section>
+
+      <footer>
+        <a href="https://github.com/Dem0neuS/Momentum">Исходный код на GitHub</a>
+      </footer>
+    </main>
+
+    <script>
+      // Адрес подставляется на сборку: на Pages это /Momentum/, у себя на
+      // компьютере — корень. Собирать вручную в HTML нельзя, адрес известен
+      // только после публикации.
+      (function () {
+        var app = '%APP_URL%';
+        var btn = document.querySelector('a.grad');
+        if (btn) btn.href = app;
+        var code = document.querySelector('code');
+        if (code) code.textContent = app;
+      })();
+    </script>
+  </body>
+</html>

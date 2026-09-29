@@ -15,7 +15,7 @@ import { useDayPlanStore } from '@/store/dayPlanStore';
 import { useAuthStore } from '@/store/authStore';
 import { useKeydown, useNow } from '@/lib/hooks';
 import { todayKey } from '@/lib/dates';
-import { rememberSection, sectionFromLocation } from '@/lib/deepLink';
+import { rememberSection, sectionFromLocation, watchDeepLink } from '@/lib/deepLink';
 import type { SectionId } from '@/components/navigation';
 import { DashboardPage } from '@/pages/Dashboard';
 import { HabitsPage } from '@/pages/Habits';
@@ -94,10 +94,12 @@ export default function App() {
   // Раздел в адресной строке ↔ состояние навигации
   useEffect(() => {
     rememberSection(section);
-    const onPop = () => setSection(sectionFromLocation(window.location.search) ?? 'dashboard');
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
   }, [section]);
+
+  // Смена раздела снаружи приложения: ярлык из манифеста поверх уже открытого
+  // окна, «назад» в истории. Подписка одна на всё время жизни приложения —
+  // переподписывать её на каждый раздел незачем.
+  useEffect(() => watchDeepLink(() => setSection(sectionFromLocation(window.location.search) ?? 'dashboard')), []);
 
   // Ctrl/Cmd+Z — глобальный undo (кроме полей ввода)
   useKeydown((e) => {
