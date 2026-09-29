@@ -324,13 +324,41 @@ VITE_SUPABASE_REDIRECT_URL=http://localhost:5173/
 Подробности (зеркало репликации, `momentum_push` / `momentum_pull`, слияние по
 `updated_at`) — в отдельном разделе ниже, когда синхронизация будет доделана.
 
+#### Что настроено в проекте (29.09.2026)
+
+Проект Supabase: `blivexnftddazmsxjzbq`, адрес `https://blivexnftddazmsxjzbq.supabase.co`.
+Ключи лежат в `.env.local` и в секретах GitHub (`VITE_SUPABASE_URL`,
+`VITE_SUPABASE_ANON_KEY`), поэтому и сайт, и `.exe` собираются уже с кабинетом.
+
+Сделано:
+
+- `supabase/schema.sql` применён: таблицы `momentum_rows` и `momentum_profile`,
+  RLS включён (4 и 3 политики), функции `momentum_push` / `momentum_pull` созданы
+  и доступны роли `authenticated`. `security_definer = false` — политики RLS
+  действительно применяются, а не обходятся.
+- Authentication → URL Configuration:
+  - Site URL: `https://dem0neus.github.io/Momentum/`
+  - Redirect URLs: `https://dem0neus.github.io/Momentum/**`, `http://localhost:5173/**`
+- Провайдер Email включён, подтверждение адреса обязательно
+  (`mailer_autoconfirm = false`), самостоятельная регистрация разрешена.
+
+Осталось за пользователем — **SMTP с Яндексом** (Authentication → SMTP):
+выпустить в Яндексе пароль приложения для `toperjoker1010@gmail.com` и вписать
+его вместо основного пароля. Пока SMTP не настроен, письма идут через встроенный
+почтовый сервис Supabase, который на бесплатном тарифе жёстко ограничивает число
+отправок — годится для проверки, но не для обычной работы. Секрет в репозиторий
+не попадает: его вводят только в панели Supabase.
+
 ### Что ещё предстоит
 
 - **Синхронизация.** Схема БД готова, движка нет: нужны `updatedAt` / tombstone
   во всех 13 таблицах (миграция Dexie выше версии 10), outbox и слияние через
-  `momentum_push` / `momentum_pull`.
-- **Проверка вживую.** Без настоящего `VITE_SUPABASE_URL` и `VITE_SUPABASE_ANON_KEY`
-  кабинет собрать можно, но проверить вход и письма — нельзя.
+  `momentum_push` / `momentum_pull`. До синхронизации вход работает, но переноса
+  данных между устройствами не будет.
+- **Проверка вживую.** Сделана для сайта: форма входа/регистрации/восстановления
+  отображается, запрос к `auth/v1/token` с сайта проходит (CSP не блокирует,
+  ответ `400 invalid_credentials` на несуществующем пользователе). Осталось
+  руками зарегистрироваться и дождаться письма — для этого нужен SMTP.
 
 ## Данные (экспорт/импорт, сброс)
 
