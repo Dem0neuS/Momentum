@@ -57,6 +57,25 @@ jobs:
             echo "::warning::Секрет VITE_SUPABASE_URL не задан — в .exe кабинет не работает, вместо форм входа будет подсказка."
           fi
 
+      - name: Убедиться, что тег релиза есть
+        # GitHub не создаёт релиз без существующего тега: 422 "Published
+        # releases must have a valid tag". electron-builder тег не создаёт —
+        # это умеет только git-провайдер, а здесь провайдер GitHub (API).
+        # На 1.0.1 из-за этого релиз остался с одним .blockmap: установщик,
+        # portable и latest.yml не загрузились, и обновлять было нечем.
+        # Тег ставим на тот же коммит, что и релиз.
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION"
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Тег $TAG уже есть — публикуем в него."
+          else
+            git tag -a "$TAG" -m "Momentum $VERSION"
+            git push origin "$TAG"
+            echo "Создан тег $TAG на $(git rev-parse --short HEAD)."
+          fi
+
       - name: Собрать установщик и опубликовать
         # Собираем ровно один раз за запуск. Раньше шагов было два — «с
         # публикацией» и «без», — и оба выполнялись при publish=true:
