@@ -57,16 +57,26 @@ jobs:
             echo "::warning::Секрет VITE_SUPABASE_URL не задан — в .exe кабинет не работает, вместо форм входа будет подсказка."
           fi
 
-      - name: Собрать установщик
+      - name: Собрать установщик и опубликовать
+        # Собираем ровно один раз за запуск. Раньше шагов было два — «с
+        # публикацией» и «без», — и оба выполнялись при publish=true:
+        # electron-builder создавал два черновика с одним тегом, а файлы
+        # установщика и latest.yml оказывались в разных релизах. Скачивание
+        # такое не находит, и electron-updater не видит обновления.
+        #
         # electron-builder дописывает в app-update.yml данные репозитория
         # из секции build.publish — их читает electron-updater в приложении.
-        run: npx electron-builder --win --publish never
+        # releaseType: release в package.json нужен, чтобы релиз не остался
+        # черновиком: черновик не виден в releases/latest, на который
+        # ведут кнопки страницы загрузки.
+        if: ${{ inputs.publish }}
+        run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Опубликовать релиз
-        if: ${{ inputs.publish }}
-        run: npx electron-builder --win --publish always
+      - name: Собрать установщик без публикации
+        if: ${{ !inputs.publish }}
+        run: npx electron-builder --win --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

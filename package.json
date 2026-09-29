@@ -94,7 +94,8 @@
     "publish": {
       "provider": "github",
       "owner": "Dem0neuS",
-      "repo": "momentum"
+      "repo": "Momentum",
+      "releaseType": "release"
     },
     "win": {
       "icon": "public/icons/icon-512.png",
