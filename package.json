@@ -1,7 +1,7 @@
 {
   "name": "momentum",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "description": "Momentum — личный трекер: привычки, тренировки, таблицы и план 3-2-1",
   "author": "Momentum",
@@ -11,6 +11,8 @@
     "build": "tsc -b && vite build",
     "build:web": "node scripts/build-web.mjs",
     "verify:manifest": "node scripts/verify-manifest.mjs",
+    "check:tabs": "node scripts/check-tabs.mjs",
+    "check:icon": "node scripts/check-exe-icon.mjs",
     "supabase:check": "node scripts/check-supabase.mjs",
     "qr": "node scripts/build-qr.mjs",
     "preview": "vite preview",

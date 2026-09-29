@@ -105,7 +105,10 @@ export default function App() {
   // Смена раздела снаружи приложения: ярлык из манифеста поверх уже открытого
   // окна, «назад» в истории. Подписка одна на всё время жизни приложения —
   // переподписывать её на каждый раздел незачем.
-  useEffect(() => watchDeepLink(() => setSection(sectionFromLocation(window.location.search) ?? 'dashboard')), []);
+  useEffect(
+    () => watchDeepLink((search) => setSection(sectionFromLocation(search) ?? 'dashboard')),
+    [],
+  );
 
   // Ctrl/Cmd+Z — глобальный undo (кроме полей ввода)
   useKeydown((e) => {
