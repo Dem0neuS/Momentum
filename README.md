@@ -406,7 +406,9 @@ VITE_SUPABASE_REDIRECT_URL=http://localhost:5173/
 - `supabase/schema.sql` применён: таблицы `momentum_rows` и `momentum_profile`,
   RLS включён (4 и 3 политики), функции `momentum_push` / `momentum_pull` созданы
   и доступны роли `authenticated`. `security_definer = false` — политики RLS
-  действительно применяются, а не обходятся.
+  действительно применяются, а не обходятся. Таблица `momentum_profile`
+  зарезервирована и не используется: профиль хранится в `settings` обычной
+  синхронизируемой таблицы, так что отдельная таблица ему не нужна.
 - Authentication → URL Configuration:
   - Site URL: `https://dem0neus.github.io/Momentum/`
   - Redirect URLs: `https://dem0neus.github.io/Momentum/**`, `http://localhost:5173/**`
