@@ -106,6 +106,10 @@ jobs:
       - name: Догрузить переносимую версию в релиз
         if: ${{ inputs.publish }}
         shell: bash
+        # gh требует токен явно: в workflow переменной нет по умолчанию, и без
+        # неё шаг падает с кодом 4 и длинным объяснением вместо загрузки.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v$(node -p "require('./package.json').version")"
           gh release upload "$TAG" release/Momentum-*-portable.exe --clobber --repo "$GITHUB_REPOSITORY"
