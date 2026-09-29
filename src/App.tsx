@@ -6,8 +6,11 @@ import { Sidebar } from '@/components/Sidebar';
 import { BottomNav } from '@/components/BottomNav';
 import { SplashScreen, SPLASH_DURATION } from '@/components/SplashScreen';
 import { ProfileDialog } from '@/components/ProfileDialog';
+import { SyncChoiceDialog } from '@/components/SyncChoiceDialog';
 import { useUpdateToast } from '@/components/UpdateAppCard';
 import { initApp } from '@/lib/boot';
+import { installSyncHooks } from '@/db/syncHooks';
+import { attachSync } from '@/sync/engine';
 import { useHistoryStore } from '@/store/historyStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useHabitsStore } from '@/store/habitsStore';
@@ -49,6 +52,9 @@ export default function App() {
   useEffect(() => {
     let alive = true;
     (async () => {
+      // Хуки ставятся до сидинга: иначе стартовые привычки остались бы
+      // без метки и в облако бы не уехали.
+      installSyncHooks();
       await initApp();
       if (!alive) return;
       setReady(true);
@@ -121,6 +127,15 @@ export default function App() {
     void useAuthStore.getState().refresh();
   }, []);
 
+  // Движок синхронизации живёт ровно пока есть вошедший пользователь:
+  // на `anon` он молчит, на новом id перезапускается с нуля.
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const authReady = useAuthStore((s) => s.ready);
+  useEffect(() => {
+    if (!authReady) return;
+    attachSync(userId);
+  }, [authReady, userId]);
+
   // Тост «Обновление готово» с кнопкой «Обновить» (только десктопная версия).
   useUpdateToast();
 
@@ -153,6 +168,7 @@ export default function App() {
         <BottomNav active={section} onNavigate={setSection} />
 
         <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+        <SyncChoiceDialog />
       </div>
     </MotionConfig>
   );

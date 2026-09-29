@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA, type ManifestOptions } from 'vite-plugin-pwa';
 import path from 'node:path';
@@ -17,16 +17,28 @@ import fs from 'node:fs';
  */
 const base = process.env.MOMENTUM_BASE || '/';
 
-/** Хост Supabase для connect-src: из полного URL берём только происхождение. */
-const supabaseOrigin = (() => {
-  const url = process.env.VITE_SUPABASE_URL;
+/**
+ * Хост Supabase для connect-src: из полного URL берём только происхождение.
+ *
+ * Источник — loadEnv, а не process.env. Vite читает .env.local сам и кладёт
+ * значения в import.meta.env, но в process.env не кладёт: там оказываются
+ * только переменные, заданные в системе или в CI. Поэтому локальная сборка
+ * видела пустую строку, CSP получался строже нужного (connect-src 'self'),
+ * и синхронизация молча не работала ни на одном адресе — запрос уходил в
+ * блокировку браузера, а не в сеть.
+ *
+ * mode передаётся из defineConfig: для dev и build он разный.
+ */
+function supabaseOriginFor(mode: string): string {
+  const url =
+    loadEnv(mode, process.cwd(), 'VITE_').VITE_SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
   if (!url) return '';
   try {
     return new URL(url).origin;
   } catch {
     return '';
   }
-})();
+}
 
 const manifest: Partial<ManifestOptions> = {
   id: base,
@@ -78,22 +90,8 @@ const manifest: Partial<ManifestOptions> = {
   ],
 };
 
-// Политика безопасности для собранного приложения. В dev её не добавляем:
-// HMR требует websocket-соединений, которые жёсткий connect-src 'self' не всегда пропускает.
-const CSP_META = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob:",
-  // Кабинет и синхронизация ходят в Supabase, поэтому его адрес должен быть
-  // разрешён. Ключ подставляется на сборку: без VITE_SUPABASE_URL в политике
-  // остаётся только 'self' — то есть ровно то, что нужно локальной версии.
-  `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin}` : ''}`,
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-].join('; ');
+// Политика безопасности собирается в cspMeta: она зависит от адреса Supabase,
+// который известен только после чтения .env.local.
 
 /**
  * Пустой файл `.nojekyll` в dist.
@@ -142,7 +140,26 @@ function downloadPage(): Plugin {
 }
 
 /** Вставляет CSP в собранный index.html (в Electron-обёртке это второй слой). */
-function cspMeta(): Plugin {
+/**
+ * Политика безопасности для собранного приложения. В dev её не добавляем:
+ * HMR требует websocket-соединений, которые жёсткий connect-src 'self' не всегда пропускает.
+ */
+function cspMeta(supabaseOrigin: string): Plugin {
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob:",
+    // Кабинет и синхронизация ходят в Supabase, поэтому его адрес должен быть
+    // разрешён. Ключ подставляется на сборку: без VITE_SUPABASE_URL в политике
+    // остаётся только 'self' — то есть ровно то, что нужно локальной версии.
+    `connect-src 'self'${supabaseOrigin ? ` ${supabaseOrigin}` : ''}`,
+    "worker-src 'self' blob:",
+    "object-src 'none'",
+    "base-uri 'self'",
+  ].join('; ');
+
   return {
     name: 'momentum:csp-meta',
     apply: 'build',
@@ -150,7 +167,7 @@ function cspMeta(): Plugin {
       return [
         {
           tag: 'meta',
-          attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP_META },
+          attrs: { 'http-equiv': 'Content-Security-Policy', content: policy },
           injectTo: 'head-prepend' as const,
         },
       ];
@@ -158,13 +175,15 @@ function cspMeta(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const supabaseOrigin = supabaseOriginFor(mode);
+  return {
   // Vite переписывает под этот префикс пути в собранном HTML и в регистрации
   // service worker'а. Для десктопной версии остаётся '/'.
   base,
   plugins: [
     react(),
-    cspMeta(),
+    cspMeta(supabaseOrigin),
     nojekyll(),
     downloadPage(),
     VitePWA({
@@ -231,4 +250,5 @@ export default defineConfig({
     port: 5173,
     host: true,
   },
+  };
 });

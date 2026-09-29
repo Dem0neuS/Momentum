@@ -19,6 +19,7 @@ import { Select } from './ui/select';
 import { Switch } from './ui/switch';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import { AccountCard, ChangePasswordCard, RecoveryCard } from './AccountCard';
+import { SyncCard } from './SyncCard';
 import { InstallAppCard } from './InstallAppCard';
 import { UpdateAppCard } from './UpdateAppCard';
 import { useSettingsStore } from '@/store/settingsStore';
@@ -26,7 +27,9 @@ import { useHistoryStore } from '@/store/historyStore';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useWorkoutsStore } from '@/store/workoutsStore';
 import { useAuthStore } from '@/store/authStore';
-import { collectAllData, replaceAllData, clearAllData } from '@/db/db';
+import { collectAllData } from '@/db/db';
+import { replaceLocalData, resetLocalData } from '@/sync/engine';
+import type { AllData } from '@/lib/types';
 import { downloadJson, readJsonFile } from '@/lib/utils';
 import { todayKey } from '@/lib/dates';
 import { reloadAll, initApp } from '@/lib/boot';
@@ -115,7 +118,9 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
         toast.error('Не удалось распознать файл бэкапа');
         return;
       }
-      await replaceAllData(data as never);
+      // Импорт заменяет базу целиком, поэтому идёт через движок: он достроит
+      // журнал удалений и метки, иначе изменения не дошли бы до облака.
+      await replaceLocalData(data as unknown as AllData);
       useHistoryStore.getState().clear();
       await reloadAll();
       toast('Данные импортированы');
@@ -128,7 +133,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   const resetData = async () => {
-    await clearAllData();
+    await resetLocalData();
     useHistoryStore.getState().clear();
     await initApp();
     toast('Данные сброшены, созданы стартовые привычки');
@@ -155,7 +160,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
                 {initialsOf(displayName)}
               </span>
               <div className="min-w-0 flex-1 space-y-2">
-                <Field label="Как к вам обращаться" hint="Имя хранится только на этом устройстве.">
+                <Field label="Как к вам обращаться" hint={authed ? 'Копируется в аккаунт и на другие устройства.' : 'Хранится только на этом устройстве.'}>
                   <Input
                     value={name}
                     onChange={(e) => saveName(e.target.value)}
@@ -225,6 +230,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
               ) : (
                 <>
                   <AccountCard />
+                  <SyncCard />
                   <ChangePasswordCard />
                 </>
               )}

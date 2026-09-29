@@ -86,6 +86,18 @@ function upsertLog(logs: HabitLog[], log: HabitLog): HabitLog[] {
 /** Отслеживание уже показанных уведомлений о прерванной серии (в рамках сессии) */
 const interruptedNotified = new Set<string>();
 
+/**
+ * Годится ли запись для отрисовки.
+ *
+ * Проверяется ровно то, на чём падает рендер: имя нужно карточке, а
+ * `frequency.type` — и списку, и подсчёту серий. Недостающих полей не
+ * достраиваем намеренно: угаданное значение молча показало бы человеку
+ * другую привычку, чем ту, что он завёл.
+ */
+function isDrawable(habit: Habit | undefined): boolean {
+  return Boolean(habit?.name) && typeof habit?.frequency?.type === 'string';
+}
+
 export const useHabitsStore = create<HabitsState>((set, get) => ({
   loaded: false,
   categories: [],
@@ -112,7 +124,19 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
     const streaks: Record<string, StreakInfo> = {};
     const toPersist: StreakInfo[] = [];
 
-    for (const habit of data.habits) {
+    // Строка, на которой падает отрисовка, хуже её отсутствия: одна битая
+    // запись — из старой версии, из ручной правки базы, из неполной выгрузки —
+    // оставляла бы весь раздел пустым, потому что рендер ломается на
+    // `frequency.type` и React выкидывает поддерево целиком. Такие строки
+    // отбрасываем: ни отрисовать, ни посчитать по ним всё равно нельзя.
+    const habits = data.habits.filter(isDrawable);
+    if (habits.length !== data.habits.length) {
+      console.warn(
+        `Momentum: отброшено непригодных записей привычек: ${data.habits.length - habits.length}`,
+      );
+    }
+
+    for (const habit of habits) {
       const logs = data.habitLogs.filter((l) => l.habitId === habit.id);
       const res = computeStreaks(habit, logs, new Date(), maxSkips);
       const prev = storedStreaks.get(habit.id);
@@ -145,7 +169,7 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
       loaded: true,
       categories: data.categories,
       subcategories: data.subcategories,
-      habits: data.habits,
+      habits,
       logs: data.habitLogs,
       streaks,
     });

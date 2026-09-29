@@ -17,6 +17,28 @@ import type {
 } from '@/lib/types';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
 
+/**
+ * Таблицы, которые уезжают в облако. Объявлены здесь, а не в движке
+ * синхронизации, потому что нужны ещё и миграции схемы.
+ */
+export const SYNC_TABLES = [
+  'categories',
+  'subcategories',
+  'habits',
+  'habitLogs',
+  'streaks',
+  'workouts',
+  'exercises',
+  'workoutTemplates',
+  'sheets',
+  'cells',
+  'dayPlans',
+  'dayPlanItems',
+  'settings',
+] as const;
+
+export type SyncTable = (typeof SYNC_TABLES)[number];
+
 export class MomentumDB extends Dexie {
   categories!: Table<Category, string>;
   subcategories!: Table<Subcategory, string>;
@@ -30,7 +52,7 @@ export class MomentumDB extends Dexie {
   cells!: Table<Cell, string>;
   dayPlans!: Table<DayPlan, string>;
   dayPlanItems!: Table<DayPlanItem, string>;
-  settings!: Table<{ key: string; value: unknown }, string>;
+  settings!: Table<{ key: string; value: unknown; updatedAt?: string }, string>;
 
   constructor() {
     super('momentum');
@@ -49,6 +71,35 @@ export class MomentumDB extends Dexie {
       dayPlanItems: 'id, planId, blockType, order',
       settings: 'key',
     });
+
+    // Версия 2 добавляет синхронизацию. Изменений данных нет: только индекс
+    // updatedAt, по которому движок отбирает изменённые после последней
+    // отправки строки, и проставление меток уже существующим записям.
+    // Без меток они бы выглядели как никогда не менявшиеся и в облако не уехали.
+    this.version(2)
+      .stores({
+        categories: 'id, name, order, updatedAt',
+        subcategories: 'id, categoryId, name, order, updatedAt',
+        habits: 'id, name, categoryId, subcategoryId, archived, createdAt, updatedAt',
+        habitLogs: 'id, habitId, date, status, updatedAt',
+        streaks: 'habitId, current, best, updatedAt',
+        workouts: 'id, date, type, completed, updatedAt',
+        exercises: 'id, workoutId, order, updatedAt',
+        workoutTemplates: 'id, name, updatedAt',
+        sheets: 'id, name, updatedAt',
+        cells: 'id, sheetId, row, col, updatedAt',
+        dayPlans: 'id, date, updatedAt',
+        dayPlanItems: 'id, planId, blockType, order, updatedAt',
+        settings: 'key, updatedAt',
+      })
+      .upgrade(async (tx) => {
+        const stamp = new Date().toISOString();
+        for (const name of SYNC_TABLES) {
+          await tx.table(name).toCollection().modify((obj: Record<string, unknown>) => {
+            obj.updatedAt = stamp;
+          });
+        }
+      });
   }
 }
 
