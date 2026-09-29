@@ -43,6 +43,10 @@ jobs:
         run: npm run build
 
       - name: Проверить, настроен ли кабинет
+        # shell: bash обязателен: job собирается на windows-latest, где
+        # оболочкой по умолчанию PowerShell, а синтаксис if [ -n ... ] там не
+        # разбирается и шаг падает вместо предупреждения.
+        shell: bash
         env:
           HAS_URL: ${{ secrets.VITE_SUPABASE_URL }}
         run: |
