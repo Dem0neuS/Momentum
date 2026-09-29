@@ -138,10 +138,33 @@ const tracer = String.raw`
     for (const label of ['Привычки', 'Тренировки', 'Таблицы', 'План на завтра', 'Дашборд']) {
       out.push(await window.__click(label));
     }
+    // Ярлык из манифеста поверх открытого окна: браузер выполняет переход
+    // внутри документа, и приложение узнаёт о нём по событию navigate с
+    // destination. Само destination подставляем — настоящий клик по ярлыку
+    // из окна воспроизвести нельзя, а форма события интересует именно она.
+    out.push(await window.__shortcut('Тренировки'));
     window.__results = out;
     window.__done = true;
     return out;
   };
+
+  window.__shortcut = (label) => new Promise((resolve) => {
+    const nav = window.navigation;
+    if (!nav) return resolve({ label, error: 'Навигационного API нет' });
+    const target = new URL(location.href);
+    target.search = '?section=workouts';
+    const event = new Event('navigate');
+    event.navigationType = 'replace';
+    event.destination = { url: target.href };
+    nav.dispatchEvent(event);
+    setTimeout(() => resolve({
+      label,
+      shortcut: true,
+      search: location.search,
+      active: section(),
+      header: (document.querySelector('header h2') || {}).textContent || '',
+    }), 900);
+  });
 
   setTimeout(() => { window.__run(); }, 4000);
 })();
@@ -167,7 +190,8 @@ for (const r of data.results ?? []) {
   const wantSearch = want ? `?section=${want}` : '';
   const ok = r.active === r.label && r.search === wantSearch;
   if (!ok) fail++;
-  console.log(`${ok ? 'OK  ' : 'СБОЙ'} ${r.label}: активен «${r.active}», адрес «${r.search}» (ждали «${r.label}» / «${wantSearch}»)`);
+  const via = r.shortcut ? ' [ярлык манифеста]' : '';
+  console.log(`${ok ? 'OK  ' : 'СБОЙ'} ${r.label}${via}: активен «${r.active}», адрес «${r.search}» (ждали «${r.label}» / «${wantSearch}»)`);
 }
 
 const writes = data.log.filter((e) => e.what === 'replaceState');
@@ -176,10 +200,14 @@ console.log(`\nreplaceState: ${writes.length}, navigate: ${navs.length}`);
 console.log('последние записи адреса:');
 for (const w of writes.slice(-6)) console.log(`  ${JSON.stringify(w)}`);
 
-if (fail === 0 && writes.length <= 6) {
-  console.log(`\nОК: все вкладки переключаются, лишних записей адреса нет (${writes.length} на 5 переходов).`);
+// Шесть переходов (пять вкладок и ярлык манифеста) плюс одна запись на
+// маунте. Больше — значит приложение пишет адрес в ответ на свою же запись,
+// то есть петля вернулась.
+const MAX_WRITES = 7;
+if (fail === 0 && writes.length <= MAX_WRITES) {
+  console.log(`\nОК: вкладки переключаются и ярлык манифеста работает, лишних записей адреса нет (${writes.length} на 6 переходов).`);
 } else {
-  console.log(`\nПРОВАЛ: вкладок не так — ${fail}, записей адреса — ${writes.length}.`);
+  console.log(`\nПРОВАЛ: вкладок не так — ${fail}, записей адреса — ${writes.length} (допустимо до ${MAX_WRITES}).`);
 }
 
 ws.close();

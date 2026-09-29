@@ -66,6 +66,12 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           TAG="v$VERSION"
+          # Образ runner'а приходит без git identity, и `git tag -a` падает с
+          # "Committer identity unknown" — релиз 1.0.2 так и не собрался.
+          # Задаём её в этом репозитории: тег указывает на коммит, а не на
+          # анонимного пользователя машины.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "Тег $TAG уже есть — публикуем в него."
           else
