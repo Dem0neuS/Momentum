@@ -80,46 +80,61 @@ jobs:
             echo "Создан тег $TAG на $(git rev-parse --short HEAD)."
           fi
 
-      - name: Собрать установщик и опубликовать
-        # Публикует ровно одна цель — nsis. electron-builder держит кэш
-        # publisher'ов по конфигурации публикации, и на nsis + portable их
-        # получается два: каждый создаёт релиз сам и в обоих случаях в лог
-        # идёт «creating GitHub release». Второй POST проигрывает гонку и
-        # получает 422 «Published releases must have a valid tag», потому что
-        # релиз и тег к этому моменту уже созданы первым. Побочный эффект хуже
-        # самой ошибки: загрузки от проигравшего отменяются, и релиз остаётся
-        # неполным. На 1.0.1 так потерялся .blockmap — без него
-        # electron-updater не может качать обновление частями.
-        # Portable поэтому собирается отдельно и догружается шагом ниже.
+      - name: Собрать установщик и переносимую версию
+        # Публикацией занимается не electron-builder, а gh ниже. Причина —
+        # гонка: сколько бы целей ни оставалось в этом шаге, electron-builder
+        # держит кэш publisher'ов по конфигурации публикации, и на релиз
+        # 1.0.2 пришлось ровно два — оба печатают «creating GitHub release».
+        # Второй POST проигрывает и получает 422 «Published releases must
+        # have a valid tag», а его загрузки отменяются: релиз остаётся
+        # неполным. Так на 1.0.1 потерялся .blockmap, и то же повторилось на
+        # 1.0.2 — electron-builder отменил загрузку blockmap, а она шла
+        # первой. Одной цели вместо двух не помогает: гонка и на `--win nsis`.
+        #
+        # Побочно уходит и другое ограничение electron-builder: релиз
+        # опубликованный больше двух часов назад он догружать отказывается
+        # («existing release published more than 2 hours ago»), и публикация
+        # молча пропускается. У gh такого правила нет.
         #
         # electron-builder дописывает в app-update.yml данные репозитория
-        # из секции build.publish — их читает electron-updater в приложении.
-        # releaseType: release в package.json нужен, чтобы релиз не остался
-        # черновиком: черновик не виден в releases/latest, на который
-        # ведут кнопки страницы загрузки.
+        # из секции build.publish — их читает electron-updater в приложении,
+        # поэтому публиковать через gh безопасно.
         if: ${{ inputs.publish }}
-        run: npx electron-builder --win nsis --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win nsis portable --publish never
 
-      - name: Собрать переносимую версию
-        # Без публикации: релиз к этому моменту уже создан предыдущим шагом.
-        if: ${{ inputs.publish }}
-        run: npx electron-builder --win portable --publish never
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Догрузить переносимую версию в релиз
+      - name: Создать релиз
+        # Релиз создаётся до загрузки файлов и ровно один раз: два POST
+        # /releases из одного прогона и есть та самая гонка. Создавать
+        # нужно опубликованным, а не черновиком: на releases/latest ведут
+        # кнопки страницы загрузки, черновик там не виден.
         if: ${{ inputs.publish }}
         shell: bash
-        # gh требует токен явно: в workflow переменной нет по умолчанию, и без
-        # неё шаг падает с кодом 4 и длинным объяснением вместо загрузки.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="v$(node -p "require('./package.json').version")"
-          gh release upload "$TAG" release/Momentum-*-portable.exe --clobber --repo "$GITHUB_REPOSITORY"
-          echo "Переносимая версия добавлена в $TAG."
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Релиз $TAG уже есть — файлы догружаются в него."
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" \
+              --title "Momentum $(node -p "require('./package.json').version")" \
+              --generate-notes
+            echo "Создан релиз $TAG."
+          fi
+
+      - name: Загрузить файлы в релиз
+        # Momentum-* покрывает установщик, переносимую версию и .blockmap
+        # (его имя выводится из имени установщика), latest.yml лежит рядом
+        # и под шаблон не попадает — его указываем отдельно.
+        if: ${{ inputs.publish }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v$(node -p "require('./package.json').version")"
+          gh release upload "$TAG" release/Momentum-* release/latest.yml \
+            --clobber --repo "$GITHUB_REPOSITORY"
+          echo "Файлы релиза $TAG загружены."
 
       - name: Собрать установщик без публикации
         if: ${{ !inputs.publish }}
