@@ -29,6 +29,11 @@ export function SheetsPage() {
   const addCol = useSheetsStore((s) => s.addCol);
   const removeCol = useSheetsStore((s) => s.removeCol);
 
+  // Подписка нужна: без неё панель брала бы ячейку через getState() и не
+  // перерисовывалась, — состояние кнопок жирного/курсива и заливки осталось
+  // бы прежним, хотя ячейка уже оформлена.
+  const cells = useSheetsStore((s) => s.cells);
+
   const [sel, setSel] = useState<CellSel | null>(null);
   const [editing, setEditing] = useState<CellEdit | null>(null);
 
@@ -38,7 +43,10 @@ export function SheetsPage() {
   }, [activeSheetId]);
 
   const sheet = sheets.find((s) => s.id === activeSheetId) ?? null;
-  const selectedCell = sel && sheet ? useSheetsStore.getState().getCell(sheet.id, sel.r, sel.c) : null;
+  const selectedCell = useMemo(
+    () => (sel && sheet ? cells.find((c) => c.sheetId === sheet.id && c.row === sel.r && c.col === sel.c) : undefined),
+    [cells, sel, sheet],
+  );
 
   const style = (patch: Record<string, unknown>) => {
     if (sheet && sel) setCellStyle(sheet.id, sel.r, sel.c, patch);
@@ -83,6 +91,9 @@ export function SheetsPage() {
               onClick={() => style({ bold: !selectedCell?.style?.bold })}
               title="Жирный"
               aria-label="Жирный"
+              // Переключатель без aria-pressed не сообщает, включён ли он:
+              // и не озвучивает состояние тем, кто читает с экрана.
+              aria-pressed={!!selectedCell?.style?.bold}
             >
               <Bold className="h-4 w-4" />
             </button>
@@ -91,6 +102,7 @@ export function SheetsPage() {
               onClick={() => style({ italic: !selectedCell?.style?.italic })}
               title="Курсив"
               aria-label="Курсив"
+              aria-pressed={!!selectedCell?.style?.italic}
             >
               <Italic className="h-4 w-4" />
             </button>
@@ -122,7 +134,12 @@ export function SheetsPage() {
             <span className="mx-0.5 h-6 w-px bg-border/70" />
             <Popover
               trigger={
-                <button className={cn(toolBtn(!!selectedCell?.style?.bg), 'gap-1')} title="Цвет заливки" aria-label="Цвет заливки">
+                <button
+                  className={cn(toolBtn(!!selectedCell?.style?.bg), 'gap-1')}
+                  title="Цвет заливки"
+                  aria-label="Цвет заливки"
+                  aria-pressed={!!selectedCell?.style?.bg}
+                >
                   <span className="h-3 w-3 rounded-sm border border-border/60" style={{ backgroundColor: selectedCell?.style?.bg ?? COLORS[3] }} />
                 </button>
               }
@@ -135,7 +152,12 @@ export function SheetsPage() {
             </Popover>
             <Popover
               trigger={
-                <button className={toolBtn(!!selectedCell?.style?.color)} title="Цвет текста" aria-label="Цвет текста">
+                <button
+                  className={toolBtn(!!selectedCell?.style?.color)}
+                  title="Цвет текста"
+                  aria-label="Цвет текста"
+                  aria-pressed={!!selectedCell?.style?.color}
+                >
                   <span className="text-[11px] font-bold" style={{ color: selectedCell?.style?.color ?? COLORS[2] }}>
                     A
                   </span>

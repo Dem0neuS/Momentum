@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { Ban, GripVertical } from 'lucide-react';
+import { Ban, CalendarOff, GripVertical } from 'lucide-react';
 import type { Habit } from '@/lib/types';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useLongPress } from '@/lib/hooks';
+import { isScheduledOn } from '@/lib/streak';
+import { parseDayKey } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 import { StreakBadge } from './StreakBadge';
 import { MiniGraph } from './MiniGraph';
@@ -37,8 +39,12 @@ export function HabitCard({
 
   const accent = categoryColor ?? habit.color;
 
+  // Привычка «не на сегодня» в списке «Все» остаётся видимой, но отмечать её
+  // в этот день незачем: отметка попала бы в итог дня, хотя день не её.
+  const scheduled = isScheduledOn(habit, parseDayKey(date));
+
   const openSkip = () => {
-    if (habit.allowSkips) setSkipOpen(true);
+    if (habit.allowSkips && scheduled) setSkipOpen(true);
   };
 
   const longPress = useLongPress(openSkip, 480);
@@ -142,16 +148,28 @@ export function HabitCard({
 
         {/* Кольцо и кнопка пропуска */}
         <div className="flex shrink-0 flex-col items-center gap-0.5 pr-1">
-          <HabitRing habit={habit} log={log} date={date} size={44} onOpenSkip={openSkip} />
-          {habit.allowSkips && (
-            <button
-              onClick={openSkip}
-              title="Пропустить день"
-              aria-label="Пропустить день"
-              className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:text-skip-ink sm:h-auto sm:w-auto sm:p-0.5"
+          {scheduled ? (
+            <>
+              <HabitRing habit={habit} log={log} date={date} size={44} onOpenSkip={openSkip} />
+              {habit.allowSkips && (
+                <button
+                  onClick={openSkip}
+                  title="Пропустить день"
+                  aria-label="Пропустить день"
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground/40 transition-colors hover:text-skip-ink sm:h-auto sm:w-auto sm:p-0.5"
+                >
+                  <Ban className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </>
+          ) : (
+            <span
+              title="В этот день привычка не запланирована"
+              aria-label={`«${habit.name}» не запланирована на этот день`}
+              className="flex h-tap w-tap items-center justify-center rounded-full text-muted-foreground/25"
             >
-              <Ban className="h-3.5 w-3.5" />
-            </button>
+              <CalendarOff className="h-tap w-tap" />
+            </span>
           )}
         </div>
       </div>

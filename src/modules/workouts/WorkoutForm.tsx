@@ -83,7 +83,9 @@ export function WorkoutForm({
       {
         id: uid(),
         workoutId: workout?.id ?? '',
-        name: partial?.name?.trim() || 'Новое упражнение',
+        // Пустое имя — это placeholder поля, а не значение: иначе набор
+        // дописывает свой текст и получается «Новое упражнениеЖим лёжа».
+        name: partial?.name?.trim() ?? '',
         sets: partial?.sets ?? 3,
         reps: partial?.reps ?? 10,
         weight: partial?.weight ?? 0,
@@ -145,7 +147,9 @@ export function WorkoutForm({
 
   const save = () => {
     if (!name.trim() && draftExercises.length === 0) return;
-    const normalized = draftExercises.map((e, i) => ({ ...e, order: i }));
+    // Упражнения без названия — незаполненные черновики, в базу им нельзя.
+    const named = draftExercises.filter((e) => e.name.trim());
+    const normalized = named.map((e, i) => ({ ...e, order: i }));
     if (workout) {
       updateWorkout(workout.id, { name: name.trim() || 'Тренировка', date, type, notes });
       replaceExercises(workout.id, normalized);

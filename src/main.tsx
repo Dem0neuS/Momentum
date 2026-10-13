@@ -12,6 +12,10 @@ createRoot(document.getElementById('root')!).render(
     <App />
     <Toaster
       position="bottom-center"
+      // На телефоне нижнее меню занимает последние ~63 px, а тост по умолчанию
+      // встаёт в 16 px от края и накрывает его: кнопка «План» перестаёт
+      // нажиматься, пока висит уведомление. Поднимаем тосты над меню.
+      mobileOffset={{ bottom: 'calc(var(--nav-item-h) + 1.5rem)' }}
       toastOptions={{
         style: {
           border: 'var(--border-card)',

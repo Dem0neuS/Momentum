@@ -11,6 +11,7 @@ import { Field } from '@/components/ui/label';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { EmojiPicker } from '@/components/ui/emoji-picker';
 import { WEEKDAY_SHORT } from '@/lib/constants';
+import { isoWeekday } from '@/lib/dates';
 import { cn } from '@/lib/utils';
 
 export function HabitForm({
@@ -35,7 +36,10 @@ export function HabitForm({
   const [categoryId, setCategoryId] = useState<string>('');
   const [subcategoryId, setSubcategoryId] = useState<string>('');
   const [freqType, setFreqType] = useState<'daily' | 'days' | 'timesPerWeek'>('daily');
-  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 7]);
+  // Новую привычку по дням недели начинаем с сегодняшнего дня, а не с всех
+  // семи: иначе человек переключает частоту, видит всё подсвеченным и
+  // получает привычку «ежедневно», не заметив подмены.
+  const [days, setDays] = useState<number[]>(() => [isoWeekday(new Date())]);
   const [times, setTimes] = useState(3);
   const [targetCount, setTargetCount] = useState(0);
   const [counterUnit, setCounterUnit] = useState('');
@@ -51,7 +55,7 @@ export function HabitForm({
       setSubcategoryId(habit.subcategoryId ?? '');
       const f = habit.frequency;
       setFreqType(f.type);
-      setDays(f.type === 'days' ? f.days : [1, 2, 3, 4, 5, 6, 7]);
+      setDays(f.type === 'days' ? f.days : [isoWeekday(new Date())]);
       setTimes(f.type === 'timesPerWeek' ? f.times : 3);
       setTargetCount(habit.targetCount);
       setCounterUnit(habit.counterUnit);
@@ -63,7 +67,7 @@ export function HabitForm({
       setCategoryId(defaultCategoryId ?? '');
       setSubcategoryId('');
       setFreqType('daily');
-      setDays([1, 2, 3, 4, 5, 6, 7]);
+      setDays([isoWeekday(new Date())]);
       setTimes(3);
       setTargetCount(0);
       setCounterUnit('');

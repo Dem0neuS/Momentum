@@ -61,7 +61,9 @@ export function downloadJson(filename: string, data: unknown): void {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // Отпускать URL сразу нельзя: браузер ещё читает блоб по ссылке, и файл
+  // просто не доходит — обнулили адрес до конца загрузки.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 export function readFileText(file: File): Promise<string> {
@@ -73,7 +75,16 @@ export function readFileText(file: File): Promise<string> {
   });
 }
 
-export async function readJsonFile<T>(file: File): Promise<T> {
+/**
+ * Разбор JSON-файла. Синтаксис внутри может быть битым — тогда возвращаем
+ * null, а не бросаем: вызывающий код покажет человеку понятный отказ.
+ */
+export async function readJsonFile<T>(file: File): Promise<T | null> {
   const text = await readFileText(file);
-  return JSON.parse(text) as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch (e) {
+    console.warn('Файл не разобран как JSON:', e);
+    return null;
+  }
 }

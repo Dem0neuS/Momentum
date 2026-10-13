@@ -40,6 +40,7 @@ export function SheetGrid({
   const cells = useSheetsStore((s) => s.cells.filter((c) => c.sheetId === sheet.id));
   const evals = useSheetsStore((s) => s.evals[sheet.id]);
   const editRef = useRef<HTMLInputElement>(null);
+  const formulaRef = useRef<HTMLInputElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const editingRef = useRef<CellEdit | null>(editing);
   editingRef.current = editing;
@@ -295,11 +296,15 @@ export function SheetGrid({
         <span className="w-14 shrink-0 text-center text-xs font-semibold text-muted-foreground">{selectedBadge}</span>
         <span className="shrink-0 text-muted-foreground/40">ƒx</span>
         <input
+          ref={formulaRef}
           value={editing?.value ?? (sel ? (cellAt(sel.r, sel.c)?.raw ?? '') : '')}
           readOnly={editing === null && !sel}
           onFocus={() => {
             if (sel) {
               updateEditing({ r: sel.r, c: sel.c, value: cellAt(sel.r, sel.c)?.raw ?? '', source: 'formula' });
+              // Как в Excel и Sheets: печатаешь — старое значение заменяется.
+              // Без выделения «=A1*2» дописывалось бы к «10».
+              requestAnimationFrame(() => formulaRef.current?.select());
             }
           }}
           onChange={(e) => {

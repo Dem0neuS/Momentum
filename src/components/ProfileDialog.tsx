@@ -136,6 +136,10 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
     await resetLocalData();
     useHistoryStore.getState().clear();
     await initApp();
+    // Диалог остаётся открытым, поэтому размер хранилища надо перемерить:
+    // иначе в шапке осталось бы число от удалённых данных.
+    void storageUsed().then(setBytes);
+    setSection('account');
     toast('Данные сброшены, созданы стартовые привычки');
   };
 
