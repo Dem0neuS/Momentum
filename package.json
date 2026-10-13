@@ -21,7 +21,10 @@
     "electron:start": "npm run build && electron .",
     "electron:build": "npm run build && electron-builder --win --publish never",
     "rollback": "node scripts/rollback.mjs",
-    "release:status": "node scripts/rollback.mjs status"
+    "release:status": "node scripts/rollback.mjs status",
+    "journey": "node scripts/journey-runner.mjs",
+    "journey:mobile": "node scripts/journey-runner.mjs --mobile",
+    "journey:local": "node scripts/journey-runner.mjs --base=http://localhost:5173"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
