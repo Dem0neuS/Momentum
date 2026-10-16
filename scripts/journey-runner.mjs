@@ -339,7 +339,7 @@ class Page {
 
   async click(sel, opts = {}, { clickCount = 1, force = false } = {}) {
     await this.scrollTo(sel, opts)
-    const found = await this.find(sel, opts)
+    let found = await this.find(sel, opts)
     if (!found.length) {
       if (process.env.JOURNEY_DEBUG) {
         const plain = plainSelector(sel)
@@ -353,6 +353,23 @@ class Page {
         console.error(`[разведка] заголовок: ${JSON.stringify(await this.eval(`() => Array.from(document.querySelectorAll('h1')).map((h) => h.innerText)`))}`)
       }
       throw new Error(`Нечего кликать: ${sel}${describeOpts(opts)}`)
+    }
+    // Диалоги и тосты въезжают анимацией (у диалога это сдвиг на 24 px вниз).
+    // `waitFor` возвращается в самом начале анимации, когда элемент уже виден,
+    // но ещё едет. Координата, снятая в этот момент, уводит клик мимо кнопки —
+    // ровно так «Отмена» в подтверждении удаления оставалась ненажатой, а клик
+    // попадал в текст над кнопкой. Дожидаемся, пока прямоугольник перестанет
+    // меняться, и только потом жмём.
+    let prev = found[0].rect
+    for (let i = 0; i < 10; i++) {
+      if (!prev) break
+      await this.sleep(60)
+      const again = await this.find(sel, opts)
+      if (!again.length) break
+      const r = again[0].rect
+      found = again
+      if (r.x === prev.x && r.y === prev.y && r.w === prev.w && r.h === prev.h) break
+      prev = r
     }
     const el = found[0]
     if (!el.visible && !force) throw new Error(`Не видно: ${sel}${describeOpts(opts)} — «${el.text.slice(0, 40)}»`)
@@ -1003,12 +1020,22 @@ async function main() {
       console.log(`    ошибок в консоли: ${page.errors.length}`)
       for (const e of [...new Set(page.errors)].slice(0, 4)) console.log(`       ${e.slice(0, 200)}`)
     }
-    results.push({ name: sc.name, verdict, note, errors: [...new Set(page.errors)], warnings: [...new Set(page.warnings)] })
+    results.push({
+      name: sc.name,
+      id: sc.id,
+      verdict,
+      note,
+      checks: page.check.rows.length,
+      errors: [...new Set(page.errors)],
+      warnings: [...new Set(page.warnings)],
+    })
   }
 
   const bad = results.filter((r) => r.verdict === 'fail')
   const noisy = results.filter((r) => r.errors.length)
   console.log(`\nИтог: ${results.length - bad.length} из ${results.length} сценариев прошли`)
+  const totalChecks = results.reduce((acc, r) => acc + r.checks, 0)
+  console.log(`SUM passed=${results.length - bad.length} total=${results.length} checks=${totalChecks}`)
   if (noisy.length) console.log(`Сценариев с ошибками в консоли: ${noisy.length} (${noisy.map((r) => r.name).join(', ')})`)
   if (bad.length) {
     console.log('\nСломанные:')
