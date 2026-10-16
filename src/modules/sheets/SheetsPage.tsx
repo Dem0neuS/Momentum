@@ -16,6 +16,7 @@ import { SheetGrid, type CellEdit, type CellSel } from './SheetGrid';
 import { Popover } from '@/components/ui/popover';
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
 import { COLORS } from '@/lib/constants';
@@ -36,6 +37,7 @@ export function SheetsPage() {
 
   const [sel, setSel] = useState<CellSel | null>(null);
   const [editing, setEditing] = useState<CellEdit | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<'row' | 'col' | null>(null);
 
   useEffect(() => {
     setSel(null);
@@ -191,12 +193,7 @@ export function SheetsPage() {
                 variant="ghost"
                 size="sm"
                 className="text-destructive-ink hover:bg-destructive/10 hover:text-destructive-ink"
-                onClick={() => {
-                  if (!sheet) return;
-                  if (globalThis.confirm(`Удалить последнюю строку листа «${sheet.name}»?`)) {
-                    removeRow(sheet.id, sheet.rowCount - 1);
-                  }
-                }}
+                onClick={() => sheet && setConfirmRemove('row')}
                 title="Удалить последнюю строку"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Строка
@@ -205,12 +202,7 @@ export function SheetsPage() {
                 variant="ghost"
                 size="sm"
                 className="text-destructive-ink hover:bg-destructive/10 hover:text-destructive-ink"
-                onClick={() => {
-                  if (!sheet) return;
-                  if (globalThis.confirm(`Удалить последний столбец листа «${sheet.name}»?`)) {
-                    removeCol(sheet.id, sheet.colCount - 1);
-                  }
-                }}
+                onClick={() => sheet && setConfirmRemove('col')}
                 title="Удалить последний столбец"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Столбец
@@ -225,6 +217,24 @@ export function SheetsPage() {
           <SheetGrid sheet={sheet} sel={sel} setSel={setSel} editing={editing} setEditing={setEditing} />
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmRemove !== null}
+        onClose={() => setConfirmRemove(null)}
+        title={confirmRemove === 'col' ? 'Удалить последний столбец?' : 'Удалить последнюю строку?'}
+        message={
+          confirmRemove === 'col'
+            ? `Последний столбец листа «${sheet?.name ?? ''}» будет удалён вместе со значениями в нём.`
+            : `Последняя строка листа «${sheet?.name ?? ''}» будет удалена вместе со значениями в ней.`
+        }
+        confirmLabel="Удалить"
+        danger
+        onConfirm={() => {
+          if (!sheet || !confirmRemove) return;
+          if (confirmRemove === 'col') removeCol(sheet.id, sheet.colCount - 1);
+          else removeRow(sheet.id, sheet.rowCount - 1);
+        }}
+      />
     </div>
   );
 }

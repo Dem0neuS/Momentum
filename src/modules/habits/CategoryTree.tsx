@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDroppable } from '@dnd-kit/core';
 import { ChevronDown, FolderCog, Plus, Trash2 } from 'lucide-react';
@@ -5,6 +6,7 @@ import type { Category, Habit, Subcategory } from '@/lib/types';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { Menu } from '@/components/ui/menu';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { HabitCard } from './HabitCard';
 import { cn } from '@/lib/utils';
 
@@ -34,6 +36,7 @@ export function CategorySection({
   const setCollapsed = useSettingsStore((s) => s.setCategoryCollapsed);
   const deleteCategory = useHabitsStore((s) => s.deleteCategory);
   const logs = useHabitsStore((s) => s.logs);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const items = [...direct, ...subs.flatMap((s) => s.items)];
   const doneToday = items.filter((h) =>
@@ -95,11 +98,7 @@ export function CategorySection({
               label: 'Удалить категорию',
               icon: <Trash2 />,
               danger: true,
-              onClick: () => {
-                if (globalThis.confirm(`Удалить категорию «${category.name}»? Привычки останутся без категории.`)) {
-                  deleteCategory(category.id);
-                }
-              },
+              onClick: () => setConfirmDelete(true),
             },
           ]}
         />
@@ -155,6 +154,16 @@ export function CategorySection({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="Удалить категорию?"
+        message={`Привычки из «${category.name}» останутся, но станут без категории.`}
+        confirmLabel="Удалить"
+        danger
+        onConfirm={() => deleteCategory(category.id)}
+      />
     </section>
   );
 }

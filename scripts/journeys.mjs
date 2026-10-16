@@ -472,9 +472,24 @@ export const scenarios = [
       await t.click('button[title="Добавить столбец"]')
       await t.sleep(250)
       t.contains(await t.bodyText(), '7 столбцов', 'столбец добавлен')
+
+      // Удаление спрашивает подтверждение: сначала отказываемся, строка должна
+      // остаться, потом соглашаемся.
       await t.click('button[title="Удалить последнюю строку"]')
+      await t.waitFor('[role="dialog"]:text-contains("Удалить последнюю строку?")', {
+        label: 'подтверждение удаления строки',
+      })
+      await t.click('[role="dialog"] button:text-is("Отмена")')
+      await t.sleep(300)
+      t.contains(await t.bodyText(), '13 строк', 'после отмены строка на месте')
+
+      await t.click('button[title="Удалить последнюю строку"]')
+      await t.waitFor('[role="dialog"]:text-contains("Удалить последнюю строку?")', {
+        label: 'подтверждение удаления строки',
+      })
+      await t.click('[role="dialog"] button:text-is("Удалить")')
       await t.sleep(400)
-      t.contains(await t.bodyText(), '12 строк', 'строка удалена')
+      t.contains(await t.bodyText(), '12 строк', 'строка удалена после подтверждения')
 
       await t.step('деляю ячейку жирным')
       await t.click('[role="gridcell"][aria-label="A1"]')

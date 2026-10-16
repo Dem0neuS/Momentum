@@ -6,6 +6,7 @@ import { useSheetsStore } from '@/store/sheetsStore';
 import { Menu } from '@/components/ui/menu';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 
 export function SheetTabs({ sheets }: { sheets: Sheet[] }) {
@@ -17,6 +18,7 @@ export function SheetTabs({ sheets }: { sheets: Sheet[] }) {
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [toDelete, setToDelete] = useState<Sheet | null>(null);
 
   const commitRename = () => {
     if (renamingId && renameValue.trim()) renameSheet(renamingId, renameValue.trim());
@@ -95,11 +97,7 @@ export function SheetTabs({ sheets }: { sheets: Sheet[] }) {
                       label: 'Удалить лист',
                       icon: <Trash2 />,
                       danger: true,
-                      onClick: () => {
-                        if (globalThis.confirm(`Удалить лист «${s.name}»? Данные будут потеряны.`)) {
-                          deleteSheet(s.id);
-                        }
-                      },
+                      onClick: () => setToDelete(s),
                     },
                   ]}
                 />
@@ -116,6 +114,16 @@ export function SheetTabs({ sheets }: { sheets: Sheet[] }) {
       >
         <Plus className="h-4 w-4" /> Лист
       </Button>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        onClose={() => setToDelete(null)}
+        title="Удалить лист?"
+        message={`Лист «${toDelete?.name ?? ''}» будет удалён вместе с данными. Отменить это без бэкапа нельзя.`}
+        confirmLabel="Удалить"
+        danger
+        onConfirm={() => toDelete && deleteSheet(toDelete.id)}
+      />
     </div>
   );
 }
