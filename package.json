@@ -1,7 +1,7 @@
 {
   "name": "momentum",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "description": "Momentum — личный трекер: привычки, тренировки, таблицы и план 3-2-1",
   "author": "Momentum",
