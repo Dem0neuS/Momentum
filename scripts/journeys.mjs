@@ -12,6 +12,15 @@
  * Запуск: npm run journey  (см. journey-runner.mjs за параметрами)
  */
 
+/** Заголовок раздела — признак, что он действительно открылся. */
+const HEAD = {
+  dashboard: 'Твой прогресс',
+  habits: 'Привычки',
+  workouts: 'Тренировки',
+  sheets: 'Таблицы',
+  dayplan: 'План',
+}
+
 /**
  * Перейти в раздел. Подпись в боковом меню и в нижнем разная («План на
  * завтра» против «Плана»), поэтому ищем по обеим и по короткой форме.
@@ -29,8 +38,12 @@ async function nav(t, id) {
     }`,
     idx,
   )
-  if (bottom.length && bottom[0]?.visible) return t.clickBox(bottom[0])
-  return t.click(`aside nav button:text-is("${full}")`)
+  if (bottom.length && bottom[0]?.visible) await t.clickBox(bottom[0])
+  else await t.click(`aside nav button:text-is("${full}")`)
+  // Раздел рисуется не мгновенно: содержимое приходит из IndexedDB, а на живом
+  // сайте ещё и через сеть. Без ожидания следующий клик по содержимому уходил
+  // в ещё пустую страницу — на ноутбуке проскакивало, на сайте нет.
+  await t.waitFor(`h1:text-contains("${HEAD[id]}")`, { label: `раздел «${want}» открылся` })
 }
 
 /** Кнопки «−» «+» «✓» в быстром меню счётчика: иконки без подписей. */
