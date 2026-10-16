@@ -83,6 +83,61 @@ function tomorrowKey() {
 const cellWeight = (t, ref) =>
   t.eval(`() => getComputedStyle(document.querySelector('[role="gridcell"][aria-label="${ref}"]')).fontWeight`)
 
+/**
+ * Кнопка внутри подтверждающего диалога с точным заголовком.
+ *
+ * Общий селектор `[role="dialog"] button:text-is("Отмена")` здесь не годится:
+ * всплывающее меню Popover тоже отдаёт `role="dialog"`, а под диалогом
+ * подтверждения может быть открыт второй диалог — форма тренировки со своей
+ * «Отменой». Первый совпавший элемент увёл бы клик не туда, поэтому ищем
+ * кнопку именно в том диалоге, чей заголовок совпал.
+ */
+function confirmBtn(title, label) {
+  return `() => {
+    const want = ${JSON.stringify(title)}.toLowerCase()
+    const dlg = [...document.querySelectorAll('[role="dialog"]')].find(
+      (d) => ((d.querySelector('h2') || {}).innerText || '').trim().toLowerCase() === want,
+    )
+    if (!dlg) return []
+    const btn = [...dlg.querySelectorAll('button')].find(
+      (b) => (b.innerText || b.textContent || '').trim() === ${JSON.stringify(label)},
+    )
+    return btn ? [btn] : []
+  }`
+}
+
+/**
+ * Дождаться подтверждения и нажать в нём кнопку — по заголовку диалога.
+ *
+ * Диалог въезжает анимацией (сдвиг на 24 px вниз), и координата, снятая в
+ * начале анимации, уводит клик мимо кнопки. Поэтому прямоугольник читается
+ * заново, пока не остановится — как в `click()`, но для кнопки, найденной
+ * своим кодом.
+ */
+async function confirmClick(t, title, label) {
+  const sel = `[role="dialog"]:text-contains(${JSON.stringify(title)})`
+  await t.waitFor(sel, { label: `подтверждение «${title}»` })
+  let box = null
+  for (let i = 0; i < 10; i++) {
+    const again = await t.geoBy(confirmBtn(title, label))
+    if (!again.length) throw new Error(`В диалоге «${title}» нет кнопки «${label}»`)
+    const r = again[0].rect
+    if (box && r.x === box.rect.x && r.y === box.rect.y && r.w === box.rect.w && r.h === box.rect.h) {
+      box = again[0]
+      break
+    }
+    box = again[0]
+    await t.sleep(80)
+  }
+  await t.clickBox(box)
+  // Диалог уезжает пружинной анимацией, и AnimatePresence держит его вместе с
+  // прозрачной подложкой в DOM ещё несколько сотен миллисекунд после закрытия.
+  // Пока подложка на месте, она перехватывает клики: кнопка меню под ней
+  // «не нажималась». Поэтому дожидаемся полного удаления диалога из DOM
+  // (hidden: true — иначе подождали бы только до прозрачности), а не спим.
+  await t.waitGone(sel, { label: `закрытие «${title}»`, opts: { hidden: true } })
+}
+
 /* -------------------------------------------------------------------------- */
 
 export const scenarios = [
@@ -260,8 +315,50 @@ export const scenarios = [
       await t.waitFor('[aria-label^="Привычка «Бассейн»"]', { label: 'карточка привычки' })
       t.contains(await t.textOf('[aria-label^="Привычка «Бассейн»"]'), 'По дням: 1 день', 'частота показана в карточке')
       await t.click('button:text-is("Закрыть")')
-      await t.sleep(200)
+      // Карточка тоже закрывается пружиной: пока она в DOM, её подложка
+      // перехватывает клики, поэтому ждём полного удаления, а не спим.
+      await t.waitGone('[role="dialog"][aria-label^="Привычка «Бассейн»"]', {
+        label: 'закрытие карточки привычки',
+        opts: { hidden: true },
+      })
       t.eq(await t.count(ring('Отметить привычку «Тренировка»')), 1, 'фильтр «Все» вернул привычки на сегодня')
+
+      await t.step('удаляю категорию — привычки из неё не пропадают')
+      // Категория здесь — папка, а не владение привычкой: после удаления
+      // привычка остаётся и просто переезжает в «Без категории».
+      // Кнопка меню есть только у своей категории, селектором её не выразить —
+      // ищем кодом по тексту секции. Замеряю перед каждым кликом: первый
+      // кликBox прокручивает страницу, и прошлые координаты после этого
+      // указывают мимо кнопки.
+      const catMenuBox = async () =>
+        t.geoBy(`(name) => {
+          const btns = [...document.querySelectorAll('button[aria-label="Управление категорией"]')]
+          const hit = btns.find((b) => ((b.closest('section') || {}).textContent || '').includes(name))
+          return hit ? [hit] : []
+        }`, 'Развитие')
+      const catBox = await catMenuBox()
+      t.eq(catBox.length, 1, 'у категории «Развитие» нашлось меню управления')
+      // Меню открывается анимацией, поэтому после клика всегда ждём пункт.
+      const openCatMenu = async () => {
+        await t.clickBox((await catMenuBox())[0])
+        await t.waitFor('button:text-is("Удалить категорию")', { label: 'пункт «Удалить категорию»' })
+      }
+      await openCatMenu()
+      await t.click('button:text-is("Удалить категорию")')
+
+      // Сначала отказ: удаление категории необратимо, и подтверждение
+      // обязано спросить.
+      await confirmClick(t, 'Удалить категорию?', 'Отмена')
+      t.contains(await t.bodyText(), 'Развитие', 'после отмены категория на месте')
+      t.eq(await t.count('button[aria-label="Управление категорией"]'), 8, 'категорий по-прежнему восемь')
+
+      await openCatMenu()
+      await t.click('button:text-is("Удалить категорию")')
+      await confirmClick(t, 'Удалить категорию?', 'Удалить')
+      await t.sleep(400)
+      t.eq(await t.count('button[aria-label="Управление категорией"]'), 7, 'категорий стало на одну меньше')
+      t.contains(await t.bodyText(), 'Читать книгу', 'привычка из удалённой категории осталась')
+      t.contains(await t.bodyText(), 'Без категории', 'и видна в разделе «Без категории»')
     },
   },
 
@@ -408,6 +505,39 @@ export const scenarios = [
       t.eq(await t.count('[aria-label="Снять отметку"]'), 1, 'отметка выполнения стоит')
       t.contains(await t.bodyText(), '1 из 1', 'счётчик выполненных обновился')
 
+      await t.step('сохраняю тренировку шаблоном и удаляю шаблон через подтверждение')
+      // Меню шаблонов живёт в форме открытой тренировки, а не в сетке недели.
+      await t.click('[aria-label="Открыть и редактировать тренировку «Грудь и трицепс»"]')
+      await t.waitFor('#workout-name', { label: 'форма тренировки' })
+      await t.click('button[aria-label="Шаблоны тренировок"]')
+      await t.waitFor('button:text-is("Сохранить как шаблон")', { label: 'меню шаблонов' })
+      await t.click('button:text-is("Сохранить как шаблон")')
+      await t.sleep(300)
+
+      await t.click('button[aria-label="Шаблоны тренировок"]')
+      await t.waitFor('button:text-contains("(2 упр.)")', { label: 'шаблон в списке применения' })
+      await t.click('button:text-is("Удалить «Грудь и трицепс»")')
+
+      // Отказ: шаблон — копия, сама тренировка от его удаления не страдает,
+      // но подтверждение всё равно обязано спросить.
+      await confirmClick(t, 'Удалить шаблон?', 'Отмена')
+      await t.sleep(300)
+      await t.click('button[aria-label="Шаблоны тренировок"]')
+      t.contains(await t.bodyText(), 'Удалить «Грудь и трицепс»', 'после отмены шаблон на месте')
+
+      await t.click('button:text-is("Удалить «Грудь и трицепс»")')
+      await confirmClick(t, 'Удалить шаблон?', 'Удалить')
+      await t.sleep(300)
+      await t.click('button[aria-label="Шаблоны тренировок"]')
+      t.eq(await t.count('button:text-is("Удалить «Грудь и трицепс»")'), 0, 'пункта удаления больше нет — шаблон удалён')
+      t.eq(await t.count('button:text-contains("(2 упр.)")'), 0, 'и из списка применения он исчез')
+      // Закрываю форму крестику в шапке: кнопка «Отмена» в подвале живёт
+      // внизу экрана, где в этот момент ещё может висеть тост «Шаблон
+      // сохранён» — тот перехватывает клик и форма остаётся открытой.
+      await t.click('[role="dialog"] [aria-label="Закрыть"]')
+      await t.waitGone('#workout-name', { label: 'форма тренировки закрылась' })
+      await t.sleep(300)
+
       await t.step('вижу тренировку на дашборде')
       await nav(t, 'dashboard')
       t.contains(await t.bodyText(), '1 сегодня', 'дашборд показывает тренировку за сегодня')
@@ -474,22 +604,27 @@ export const scenarios = [
       t.contains(await t.bodyText(), '7 столбцов', 'столбец добавлен')
 
       // Удаление спрашивает подтверждение: сначала отказываемся, строка должна
-      // остаться, потом соглашаемся.
+      // остаться, потом соглашаемся. Подтверждение закрывается пружиной, и
+      // `confirmClick` дожидается, пока его подложка уйдёт из DOM — иначе
+      // следующий клик по кнопке удаления попадёт в подложку, а не в кнопку.
       await t.click('button[title="Удалить последнюю строку"]')
-      await t.waitFor('[role="dialog"]:text-contains("Удалить последнюю строку?")', {
-        label: 'подтверждение удаления строки',
-      })
-      await t.click('[role="dialog"] button:text-is("Отмена")')
-      await t.sleep(300)
+      await confirmClick(t, 'Удалить последнюю строку?', 'Отмена')
       t.contains(await t.bodyText(), '13 строк', 'после отмены строка на месте')
 
       await t.click('button[title="Удалить последнюю строку"]')
-      await t.waitFor('[role="dialog"]:text-contains("Удалить последнюю строку?")', {
-        label: 'подтверждение удаления строки',
-      })
-      await t.click('[role="dialog"] button:text-is("Удалить")')
+      await confirmClick(t, 'Удалить последнюю строку?', 'Удалить')
       await t.sleep(400)
       t.contains(await t.bodyText(), '12 строк', 'строка удалена после подтверждения')
+
+      // Столбец удаляется через такое же подтверждение, что и строка.
+      await t.click('button[title="Удалить последний столбец"]')
+      await confirmClick(t, 'Удалить последний столбец?', 'Отмена')
+      t.contains(await t.bodyText(), '7 столбцов', 'после отмены столбец на месте')
+
+      await t.click('button[title="Удалить последний столбец"]')
+      await confirmClick(t, 'Удалить последний столбец?', 'Удалить')
+      await t.sleep(400)
+      t.contains(await t.bodyText(), '6 столбцов', 'столбец удалён после подтверждения')
 
       await t.step('деляю ячейку жирным')
       await t.click('[role="gridcell"][aria-label="A1"]')
@@ -516,6 +651,28 @@ export const scenarios = [
         'false',
         'кнопка «Жирный» вернулась в невыбранное состояние',
       )
+
+      await t.step('второй лист заводят и удаляют через подтверждение')
+      // «+ Создать лист» есть только в пустом состоянии — дальше листы
+      // добавляются кнопкой «Лист» на вкладке.
+      await t.click('button:text-is("Лист")')
+      await t.sleep(300)
+      t.contains(await t.bodyText(), 'Лист 2', 'второй лист создан и открыт')
+      t.eq(await t.count('[role="tablist"][aria-label="Листы"] [role="tab"]'), 2, 'на вкладках два листа')
+
+      await t.click('button[aria-label="Действия с листом Лист 2"]')
+      await t.waitFor('button:text-is("Удалить лист")', { label: 'пункт «Удалить лист»' })
+      await t.click('button:text-is("Удалить лист")')
+      await confirmClick(t, 'Удалить лист?', 'Отмена')
+      await t.sleep(300)
+      t.eq(await t.count('[role="tablist"][aria-label="Листы"] [role="tab"]'), 2, 'после отмены второй лист на месте')
+
+      await t.click('button[aria-label="Действия с листом Лист 2"]')
+      await t.click('button:text-is("Удалить лист")')
+      await confirmClick(t, 'Удалить лист?', 'Удалить')
+      await t.sleep(400)
+      t.eq(await t.count('[role="tablist"][aria-label="Листы"] [role="tab"]'), 1, 'после подтверждения лист удалён')
+      t.contains(await t.bodyText(), 'Лист 1', 'активным стал оставшийся лист с данными')
 
       await t.step('лист переживает перезагрузку')
       await t.send('Page.reload')
@@ -580,6 +737,83 @@ export const scenarios = [
       await t.press('Control+z')
       await t.sleep(300)
       t.contains(await t.bodyText(), 'Отменять нечего', 'история действий не переживает перезагрузку, и приложение об этом говорит')
+    },
+  },
+
+  {
+    id: 'offline',
+    name: 'Офлайн: без интернета приложение открывается и пишет данные',
+    async run(t, ctx) {
+      await t.step('захожу начисто — так приложение встаёт на новом устройстве')
+      await t.open()
+      // Service worker живёт дольше кеша и базы: чтобы увидеть настоящую
+      // установку, снимаю старую регистрацию и перезагружаюсь — страница
+      // поставит worker заново и заберёт всё в свой кэш.
+      await t.eval(`() => navigator.serviceWorker.getRegistrations().then((rs) => Promise.all(rs.map((r) => r.unregister())))`)
+      await t.send('Page.reload')
+      await t.waitReady()
+
+      await t.step('service worker ставится и берёт страницу под контроль')
+      // Сначала ждём, пока worker появится и станет активным.
+      const until = Date.now() + 25_000
+      let reg = null
+      while (Date.now() < until) {
+        reg = await t.eval(
+          `() => navigator.serviceWorker.getRegistrations().then((rs) => (rs[0] ? { active: !!rs[0].active, state: (rs[0].active && rs[0].active.state) || null } : null))`,
+        )
+        if (reg && reg.active && reg.state === 'activated') break
+        await t.sleep(300)
+      }
+      if (!reg && !(ctx?.base ?? '').includes('github.io')) {
+        // Локальный dev-сервер worker не отдаёт — офлайн здесь проверять нечем,
+        // честнее пропустить, чем падать на чужой особенности.
+        console.log('    · service worker не ставится на этом адресе — офлайн не проверяется')
+        return
+      }
+      t.ok(reg && reg.active, 'service worker установился и активен')
+
+      // Активного worker мало: страница должна быть под его управлением.
+      // `clientsClaim` живёт только в обработчике активации, а worker после
+      // снятия регистрации успевает снова стать активным ещё до перезагрузки —
+      // тогда события активации не будет, и управление даст следующая
+      // навигация. Ровно так ведёт себя человек: поставил приложение — открыл
+      // заново, и со второго раза оно работает из кэша.
+      let controlled = await t.eval('() => !!(navigator.serviceWorker && navigator.serviceWorker.controller)')
+      if (!controlled) {
+        await t.send('Page.reload')
+        await t.waitReady()
+        controlled = await t.eval('() => !!(navigator.serviceWorker && navigator.serviceWorker.controller)')
+      }
+      t.ok(controlled, 'service worker взял страницу под контроль')
+
+      await t.step('выкидываю интернет и перезапускаю приложение')
+      await t.setOffline(true)
+      await t.send('Page.reload')
+      await t.waitReady()
+      await t.sleep(500)
+      t.contains((await t.allText('h1')).join(' | '), 'Дашборд', 'дашборд открылся без интернета')
+
+      await t.step('данные приходят из IndexedDB, а не из сети')
+      await nav(t, 'habits')
+      const body = await t.bodyText()
+      for (const name of ['Пить воду', 'Тренировка', 'Читать книгу', 'Готовиться ко сну']) {
+        t.contains(body, name, `стартовая привычка «${name}» видна офлайн`)
+      }
+      t.contains(body, 'Сегодня выполнено 0 из 4', 'счётчик дня посчитан офлайн')
+
+      await t.step('офлайн не только читается, но и записывается')
+      await t.click(ring('Отметить привычку «Тренировка»'))
+      await t.sleep(400)
+      t.eq(await t.count(ring('Привычка выполнена')), 1, 'отметка сохранилась без сети')
+      t.contains(await t.bodyText(), 'Сегодня выполнено 1 из 4', 'итог дня пересчитан офлайн')
+
+      await t.step('интернет вернулся — офлайн-запись на месте')
+      await t.setOffline(false)
+      await t.send('Page.reload')
+      await t.waitReady()
+      await t.sleep(500)
+      await nav(t, 'habits')
+      t.contains(await t.bodyText(), 'Сегодня выполнено 1 из 4', 'отметка, сделанная офлайн, пережила возврат сети')
     },
   },
 

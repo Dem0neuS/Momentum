@@ -155,6 +155,21 @@ class Page {
     return this.cdp.send(method, params, this.sessionId)
   }
 
+  /**
+   * Эмуляция обрыва сети: всё, что страница просит у сети, падает сразу —
+   * как вылетевший Wi-Fi. -1 в пропускной способности значит «не ускорять».
+   * Нужна для проверки обещания «работает без интернета»: без сети остаётся
+   * service worker со своим кэшем, и приложение обязано открыться по нему.
+   */
+  async setOffline(on) {
+    await this.send('Network.emulateNetworkConditions', {
+      offline: !!on,
+      latency: 0,
+      downloadThroughput: -1,
+      uploadThroughput: -1,
+    })
+  }
+
   async eval(fn, ...args) {
     // Точка тонкая: если написать `(${src})(...args)` на двух строках, между
     // ними вставляется точка с запятой, и страница выполняет «функцию», а потом
@@ -242,6 +257,10 @@ class Page {
 
   /** Открытие приложения с нуля: сброс данных и перезагрузка. */
   async open({ path = '/', fresh = true, waitSplash = true } = {}) {
+    // Сеть возвращается до любого открытия: сценарий про офлайн мог упасть
+    // посередине, и без этой страховки следующий сценарий стартовал бы
+    // уже с вырубленной сетью.
+    await this.setOffline(false)
     await this.send('Page.navigate', { url: this.base + path })
     await this.waitReady({ waitSplash })
     if (fresh) {
@@ -392,8 +411,14 @@ class Page {
   async clickBox(box, { clickCount = 1, scroll = true } = {}) {
     if (!box) throw new Error('Кликать не по чему: элемент не найден')
     if (scroll && (box.rect.y < 0 || box.rect.y + box.rect.h > 900)) {
-      await this.eval(SCROLL_BY, box.rect.y - 300)
+      // Прокрутка двигает страницу, а значит и сам элемент: без пересчёта
+      // клик уходил по старым координатам мимо кнопки (меню категории
+      // внизу длинного списка привычек).
+      const before = await this.eval('() => window.scrollY')
+      const after = await this.eval(SCROLL_BY, box.rect.y - 300)
       await this.sleep(120)
+      const dy = (after ?? 0) - (before ?? 0)
+      box = { ...box, y: box.y - dy, rect: { ...box.rect, y: box.rect.y - dy } }
     }
     for (let i = 0; i < clickCount; i++) {
       await this.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: box.x, y: box.y, buttons: 0 })
