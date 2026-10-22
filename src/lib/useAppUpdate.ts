@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface DesktopBridge {
   isElectron: true;
@@ -29,6 +29,8 @@ interface UpdateCheckResult extends UpdateStateResult {
   version?: string | null;
   currentVersion?: string;
 }
+
+export type { UpdateCheckResult };
 
 type UpdatePhase =
   | 'idle'
@@ -83,8 +85,14 @@ export interface UpdateState {
  * даём кнопку «Обновить», если пользователь не хочет ждать выхода.
  * В веб-версии и PWA моста нет — хук молча отдаёт supported: false.
  */
-export function useAppUpdate(): UpdateState {
+export function useAppUpdate(options?: {
+  /** Вызывается после проверки по запросу пользователя: можно отдать отклик. */
+  onChecked?: (result: UpdateCheckResult) => void;
+}): UpdateState {
   const desktop = bridge();
+  // Колбэк держим в ref: его смена не должна пересоздавать подписки на события.
+  const onCheckedRef = useRef(options?.onChecked);
+  onCheckedRef.current = options?.onChecked;
   const [phase, setPhase] = useState<UpdatePhase>('idle');
   const [latest, setLatest] = useState<string | null>(null);
   const [percent, setPercent] = useState(0);
@@ -119,13 +127,21 @@ export function useAppUpdate(): UpdateState {
     if (!api) return;
     setPhase('checking');
     setMessage(null);
-    const result = await api.checkUpdate();
-    if (result.available && result.version && !result.phase) {
-      // main ещё не отдал состояние — сообщаем о наличии обновления.
-      setLatest(result.version);
-      setPhase('available');
+    try {
+      const result = await api.checkUpdate();
+      if (result.available && result.version && !result.phase) {
+        // main ещё не отдал состояние — сообщаем о наличии обновления.
+        setLatest(result.version);
+        setPhase('available');
+      }
+      apply(result);
+      onCheckedRef.current?.(result);
+    } catch (error) {
+      // Отказ IPC не должен оставаться необработанным: иначе в консоли
+      //Unhandled rejection, а пользователь не видит ничего.
+      setPhase('error');
+      setMessage(error instanceof Error ? error.message : String(error));
     }
-    apply(result);
   }, [apply]);
 
   const download = useCallback(async () => {

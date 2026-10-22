@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { LogIn, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { LogIn, LogOut, RefreshCw, ShieldCheck, UserRound } from 'lucide-react';
 import { Popover } from './ui/popover';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import { initialsOf } from '@/lib/metrics';
 import { useAuthStore } from '@/store/authStore';
+import { useAppUpdate } from '@/lib/useAppUpdate';
 
 /**
  * Монограмма в правом верхнем углу.
@@ -20,6 +21,12 @@ export function ProfileAvatar({ name, onOpenProfile }: { name: string; onOpenPro
   const authed = status === 'authed';
   const initials = initialsOf(name);
 
+  // Обновление видно отсюда, а не только из «Настройки»: иначе человек,
+  // который ждёт кнопку, её не находит — она спрятана за двумя вкладками.
+  const update = useAppUpdate();
+  const { supported: updateSupported, phase: updatePhase, latest: updateLatest, percent: updatePercent, check: checkUpdate, install: installUpdate } = update;
+  const updateReady = updateSupported && updatePhase === 'downloaded';
+
   return (
     <Popover
       align="end"
@@ -27,7 +34,7 @@ export function ProfileAvatar({ name, onOpenProfile }: { name: string; onOpenPro
       trigger={
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center rounded-[30%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-8 sm:w-8"
+          className="relative flex h-11 w-11 items-center justify-center rounded-[30%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 sm:h-8 sm:w-8"
           title={authed ? 'Профиль' : 'Профиль и вход'}
         >
           <span
@@ -37,6 +44,13 @@ export function ProfileAvatar({ name, onOpenProfile }: { name: string; onOpenPro
           >
             {initials}
           </span>
+          {/* Точка: ждёт обновления. Без неё обновление приходит тихо. */}
+          {updateReady && (
+            <span
+              aria-hidden="true"
+              className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-background"
+            />
+          )}
           <span className="sr-only">Профиль</span>
         </button>
       }
@@ -72,6 +86,36 @@ export function ProfileAvatar({ name, onOpenProfile }: { name: string; onOpenPro
           >
             <UserRound className="h-4 w-4" /> Открыть профиль
           </Button>
+
+          {/* Обновление — в одном клике отсюда, а не за двумя вкладками. */}
+          {updateSupported && (
+            <div className="space-y-1.5 border-t border-border/60 pt-2">
+              {updatePhase === 'downloaded' ? (
+                <Button size="sm" className="w-full justify-start" onClick={installUpdate}>
+                  <RefreshCw className="h-4 w-4" /> Обновить до {updateLatest}
+                </Button>
+              ) : updatePhase === 'downloading' || updatePhase === 'available' ? (
+                <p className="px-1 text-[11px] text-muted-foreground">
+                  Скачиваем версию {updateLatest ?? ''}… {Math.round(updatePercent)}%
+                </p>
+              ) : updatePhase === 'checking' ? (
+                <p className="px-1 text-[11px] text-muted-foreground">Проверяем обновления…</p>
+              ) : updatePhase === 'up-to-date' ? (
+                <p className="px-1 text-[11px] text-muted-foreground">Установлена последняя версия</p>
+              ) : updatePhase === 'error' ? (
+                <p className="px-1 text-[11px] text-destructive-ink">Не удалось проверить обновления</p>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => void checkUpdate()}
+                >
+                  <RefreshCw className="h-4 w-4" /> Проверить обновления
+                </Button>
+              )}
+            </div>
+          )}
 
           {authed ? (
             <Button

@@ -1,9 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { AlertTriangle, Check, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useAppUpdate } from '@/lib/useAppUpdate';
+import { useAppUpdate, type UpdateCheckResult } from '@/lib/useAppUpdate';
 import { usePwaUpdate } from '@/lib/usePwaUpdate';
 
 /** Мегабайты из байтов, которые electron-updater отдаёт в прогрессе. */
@@ -129,16 +129,50 @@ export function UpdateAppCard() {
 }
 
 /**
- * Всплывающее уведомление, когда новая версия уже скачана.
- * Раньше этот хук нигде не вызывался — тоста просто не было.
+ * Всплывающие уведомления об обновлении.
+ *
+ * Раньше хук нигде не вызывался — тоста просто не было. Теперь он сообщает
+ * о двух вещах: нашли новую версию и файл готов к установке. Раньше обновление
+ * проходило совсем тихо: приложение само скачивало новую версию и само её
+ * ставило при закрытии, а человек об этом не узнавал.
  */
 export function useUpdateToast() {
-  const { phase, latest, install } = useAppUpdate();
-  const notifiedFor = useRef<string | null>(null);
+  const notified = useRef<Record<string, boolean>>({});
 
+  /** Отклик на проверку по запросу человека: меню или кнопка. */
+  const handleChecked = useCallback((result: UpdateCheckResult) => {
+    if (!result.supported) return;
+    if (result.available) return; // об этом сообщит эффект по фазе «available».
+    if (result.phase === 'up-to-date') {
+      toast('Установлена последняя версия', {
+        description: result.currentVersion ? `Версия ${result.currentVersion}` : undefined,
+      });
+      return;
+    }
+    if (result.message) {
+      toast('Не удалось проверить обновления', { description: result.message });
+    }
+  }, []);
+
+  const { phase, latest, install } = useAppUpdate({ onChecked: handleChecked });
+
+  // Нашли новую версию — сказать сразу, не дожидаясь скачивания.
   useEffect(() => {
-    if (phase !== 'downloaded' || !latest || notifiedFor.current === latest) return;
-    notifiedFor.current = latest;
+    if (phase !== 'available' || !latest) return;
+    const key = `found:${latest}`;
+    if (notified.current[key]) return;
+    notified.current[key] = true;
+    toast(`Доступна версия ${latest}`, {
+      description: 'Скачивание идёт в фоне. Кнопка «Обновить» появится, когда файл будет готов.',
+    });
+  }, [phase, latest]);
+
+  // Файл скачан — можно ставить.
+  useEffect(() => {
+    if (phase !== 'downloaded' || !latest) return;
+    const key = `ready:${latest}`;
+    if (notified.current[key]) return;
+    notified.current[key] = true;
     toast('Обновление готово', {
       description: `Версия ${latest} скачана. Можно обновиться сейчас или при следующем запуске.`,
       action: { label: 'Обновить', onClick: install },
