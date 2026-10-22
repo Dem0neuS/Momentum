@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { db } from '@/db/db';
 import type { Exercise, TemplateExercise, Workout, WorkoutTemplate, WorkoutType } from '@/lib/types';
 import { dayKey, formatDayKeyShort, parseDayKey } from '@/lib/dates';
-import { nowIso, uid } from '@/lib/utils';
+import { uid } from '@/lib/utils';
 import { toastSimple, toastWithUndo } from '@/lib/toast';
 
 function hasCardioMetrics(exercise: Partial<Exercise>): boolean {

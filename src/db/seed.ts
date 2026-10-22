@@ -46,7 +46,7 @@ export async function seedIfNeeded(): Promise<boolean> {
   const subByName = new Map<string, Subcategory>();
   for (const s of subcategories) subByName.set(`${s.categoryId}:${s.name}`, s);
 
-  const habits: Habit[] = STARTER_HABITS.map((h, i) => {
+  const habits: Habit[] = STARTER_HABITS.map((h) => {
     const cat = catByName.get(h.category);
     const sub = h.subcategory && cat ? subByName.get(`${cat.id}:${h.subcategory}`) : undefined;
     return {

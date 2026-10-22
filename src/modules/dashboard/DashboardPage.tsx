@@ -4,7 +4,6 @@ import { ArrowUpRight, CalendarCheck2, CheckCircle2, ChevronRight, Dumbbell, Fla
 import { useHabitsStore } from '@/store/habitsStore';
 import { useWorkoutsStore } from '@/store/workoutsStore';
 import { useDayPlanStore } from '@/store/dayPlanStore';
-import { useSettingsStore } from '@/store/settingsStore';
 import { QUOTES } from '@/lib/constants';
 import { formatDayLong, greetingByHour, lastNDayKeys, todayKey, nextNDaysFromToday } from '@/lib/dates';
 import { logsMap, isScheduledOn } from '@/lib/streak';

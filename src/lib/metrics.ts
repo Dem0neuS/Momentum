@@ -106,7 +106,7 @@ export async function storageUsed(): Promise<number> {
   }
 }
 
-/** Байты в вид, который читается: «1,2 МБ» или «340 КБ». */
+/** Байты в вид, который читается: «1.2 МБ» или «340 КБ». */
 export function formatBytes(bytes: number): string {
   if (!bytes) return '0 КБ';
   if (bytes < 1024) return `${bytes} Б`;

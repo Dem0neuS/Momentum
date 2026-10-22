@@ -271,7 +271,8 @@ export function HabitRing({
                 className="min-h-tap w-full rounded-lg px-2 py-1 text-left text-xs text-muted-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60"
                 onClick={() => {
                   setMenu(null);
-                  habit.allowSkips ? onOpenSkip?.() : store.getState().setLogStatus(habit.id, date, 'none');
+                  if (habit.allowSkips) onOpenSkip?.();
+                  else store.getState().setLogStatus(habit.id, date, 'none');
                 }}
               >
                 Пропустить день

@@ -3,7 +3,8 @@ import { cn, clamp, plural, truncate, hexToRgba, uid, nowIso } from '@/lib/utils
 
 describe('utils: cn', () => {
   it('склеивает условные классы', () => {
-    expect(cn('a', false && 'b', null, undefined, 'c')).toBe('a c');
+    const off = false;
+    expect(cn('a', off && 'b', null, undefined, 'c')).toBe('a c');
   });
 
   it('разрешает конфликты tailwind в пользу последнего', () => {

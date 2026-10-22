@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { db } from '@/db/db';
 import type { BlockType, DayPlan, DayPlanItem } from '@/lib/types';
-import { addDays, dayKey, parseDayKey } from '@/lib/dates';
+import { addDays, dayKey, parseDayKey, todayKey } from '@/lib/dates';
 import { uid } from '@/lib/utils';
 import { toastSimple, toastWithUndo } from '@/lib/toast';
 
@@ -9,9 +9,16 @@ interface DayPlanState {
   loaded: boolean;
   plans: DayPlan[];
   items: DayPlanItem[];
+  /**
+   * Открытая дата живёт в сторе, а не в состоянии страницы: смена вкладки
+   * размонтирует DayPlanPage, и локальный useState сбрасывался на «сегодня».
+   * План на завтра при этом был сохранён, но выглядел удалённым.
+   */
+  selectedDate: string;
 
   load: (data?: { dayPlans: DayPlan[]; dayPlanItems: DayPlanItem[] }) => Promise<void>;
   reset: () => void;
+  setSelectedDate: (date: string) => void;
 
   ensurePlan: (date: string) => DayPlan;
   deletePlan: (date: string) => void;
@@ -102,6 +109,7 @@ export const useDayPlanStore = create<DayPlanState>((set, get) => ({
   loaded: false,
   plans: [],
   items: [],
+  selectedDate: todayKey(),
 
   load: async (data) => {
     if (!data) {
@@ -121,7 +129,9 @@ export const useDayPlanStore = create<DayPlanState>((set, get) => ({
     }
   },
 
-  reset: () => set({ loaded: false, plans: [], items: [] }),
+  reset: () => set({ loaded: false, plans: [], items: [], selectedDate: todayKey() }),
+
+  setSelectedDate: (date) => set({ selectedDate: date }),
 
   findPlanByDate: (date) => get().plans.find((p) => p.date === date),
 
@@ -304,7 +314,7 @@ export const useDayPlanStore = create<DayPlanState>((set, get) => ({
     void db.dayPlanItems.bulkDelete(incomplete.map((i) => i.id));
     toastWithUndo(`Перенесено: ${incomplete.length}`, () => {
       const cur = get();
-      const restored = incomplete.map((item, i) => ({ ...item, order: item.order }));
+      const restored = incomplete.map((item) => ({ ...item, order: item.order }));
       set({
         items: cur.items
           .filter((i) => !moved.some((m) => m.id === i.id) || i.planId !== target.id)

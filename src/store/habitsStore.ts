@@ -120,7 +120,6 @@ export const useHabitsStore = create<HabitsState>((set, get) => ({
 
     const storedStreaks = new Map(data.streaks.map((s) => [s.habitId, s]));
     const maxSkips = useSettingsStore.getState().settings.skipPolicy.maxConsecutiveSkips;
-    const today = todayKey();
     const streaks: Record<string, StreakInfo> = {};
     const toPersist: StreakInfo[] = [];
 

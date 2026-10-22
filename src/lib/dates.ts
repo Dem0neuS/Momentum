@@ -15,6 +15,7 @@ import {
   startOfDay,
 } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { plural } from './plural';
 
 export const DAY_KEY_FMT = 'yyyy-MM-dd';
 
@@ -120,12 +121,7 @@ export function inRange(d: Date, start: Date, end: Date): boolean {
 
 /** Русская склонённая форма: 5 дней, 2 дня, 1 день */
 export function dayCountWord(n: number): string {
-  const abs = Math.abs(n) % 100;
-  const last = abs % 10;
-  if (abs > 10 && abs < 20) return 'дней';
-  if (last > 1 && last < 5) return 'дня';
-  if (last === 1) return 'день';
-  return 'дней';
+  return plural(n, ['день', 'дня', 'дней']);
 }
 
 export function greetingByHour(hour: number): string {

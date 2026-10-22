@@ -19,7 +19,6 @@ import { chooseCloud, chooseUpload } from '@/sync/engine';
  */
 export function SyncChoiceDialog() {
   const choice = useSyncStore((s) => s.choice);
-  const canUpload = useSyncStore((s) => s.choiceCanUpload);
   const cancel = useSyncStore((s) => s.cancelChoice);
   const [busy, setBusy] = useState<'upload' | 'cloud' | null>(null);
 

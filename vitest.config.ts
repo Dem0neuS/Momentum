@@ -10,7 +10,8 @@ import path from 'node:path';
  * приложения по тем же путям, что и само приложение.
  *
  * Окружение — node: тестируем чистые функции (даты, серии, формулы,
- * метрики, склонения). Всё, что зависит от DOM, сюда не тянем намеренно.
+ * метрики, склонения) и сторы на Dexie. IndexedDB подменяет fake-indexeddb,
+ * поэтому DOM для этого не нужен.
  */
 export default defineConfig({
   resolve: {
@@ -21,5 +22,6 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
     environment: 'node',
+    setupFiles: ['src/test/setup.ts'],
   },
 });

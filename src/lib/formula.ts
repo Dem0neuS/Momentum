@@ -78,19 +78,20 @@ export function evaluateSheet(sheet: Sheet, cells: Cell[]): SheetEvaluation {
     Array.from({ length: colCount }, () => null),
   );
 
-  let hf: HyperFormula | null = null;
-  let sheetId: number | null = null;
   try {
     // Свежий инстанс на каждый пересчёт — безопасно и предсказуемо
-    hf = HyperFormula.buildEmpty({ licenseKey: 'gpl-v3' } as Partial<ConfigParams>);
+    const hf = HyperFormula.buildEmpty({ licenseKey: 'gpl-v3' } as Partial<ConfigParams>);
     const added = hf.addSheet(sheet.id);
-    sheetId = hf.getSheetId(added) ?? null;
+    const sheetId = hf.getSheetId(added) ?? null;
     if (sheetId === null) throw new Error('Sheet id not found');
     void hf.setCellContents({ row: 0, col: 0, sheet: sheetId }, matrix);
     const rawValues = hf.getSheetValues(sheetId) as unknown[][];
     for (let r = 0; r < rowCount; r++) {
       for (let c = 0; c < colCount; c++) {
-        values[r][c] = valueToCellValue(rawValues[r]?.[c]);
+        const v = valueToCellValue(rawValues[r]?.[c]);
+        // HyperFormula отдаёт пустую ячейку как '', а запасная ветка — как
+        // null. Приводим к одному виду, чтобы «пусто» не зависело от движка.
+        values[r][c] = v === '' ? null : v;
       }
     }
   } catch {

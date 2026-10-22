@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   DndContext,
   KeyboardSensor,
@@ -29,15 +29,21 @@ export function DayPlanPage() {
   const carryOverIncomplete = useDayPlanStore((s) => s.carryOverIncomplete);
   const progress = useDayPlanStore((s) => s.progress);
 
-  const [date, setDate] = useState(todayKey());
+  const date = useDayPlanStore((s) => s.selectedDate);
+  const setDate = useDayPlanStore((s) => s.setSelectedDate);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // План создаём только после загрузки стора, иначе ensurePlan успевает
-  // добавить дубль на ту же дату (гонка рендера с асинхронным load).
-  const plan = useMemo(() => {
-    if (!loaded) return null;
-    return plans.find((p) => p.date === date) ?? ensurePlan(date);
-  }, [loaded, plans, date, ensurePlan]);
+  // План только читаем здесь; создание — в эффекте ниже. Иначе ensurePlan
+  // писал бы в стор и IndexedDB прямо во время рендера, а в StrictMode
+  // рендер выполняется дважды и мог создать дубль плана на ту же дату.
+  const plan = useMemo(
+    () => (loaded ? plans.find((p) => p.date === date) ?? null : null),
+    [loaded, plans, date],
+  );
+
+  useEffect(() => {
+    if (loaded && !plan) ensurePlan(date);
+  }, [loaded, plan, date, ensurePlan]);
 
   const planItems = useMemo(
     () => (plan ? items.filter((i) => i.planId === plan.id) : []),

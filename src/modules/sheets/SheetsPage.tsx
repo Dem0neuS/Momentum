@@ -23,6 +23,7 @@ import { COLORS } from '@/lib/constants';
 
 export function SheetsPage() {
   const sheets = useSheetsStore((s) => s.sheets);
+  const loaded = useSheetsStore((s) => s.loaded);
   const activeSheetId = useSheetsStore((s) => s.activeSheetId);
   const setCellStyle = useSheetsStore((s) => s.setCellStyle);
   const addRow = useSheetsStore((s) => s.addRow);
@@ -44,6 +45,12 @@ export function SheetsPage() {
     setEditing(null);
   }, [activeSheetId]);
 
+  // Стор таблиц грузится лениво (на старте приложения он не нужен),
+  // поэтому первый заход в раздел сам читает данные из IndexedDB.
+  useEffect(() => {
+    if (!loaded) void useSheetsStore.getState().load();
+  }, [loaded]);
+
   const sheet = sheets.find((s) => s.id === activeSheetId) ?? null;
   const selectedCell = useMemo(
     () => (sel && sheet ? cells.find((c) => c.sheetId === sheet.id && c.row === sel.r && c.col === sel.c) : undefined),
@@ -59,8 +66,6 @@ export function SheetsPage() {
       'flex h-8 w-8 items-center justify-center rounded-lg border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground',
       active && 'border-primary/40 bg-primary/10 text-primary-ink',
     );
-
-  const sheetCount = sheets.length;
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-3 pb-24">

@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+export { plural } from './plural';
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
@@ -16,15 +18,6 @@ export const nowIso = () => new Date().toISOString();
 
 export function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
-}
-
-export function plural(n: number, forms: [string, string, string]): string {
-  const abs = Math.abs(n) % 100;
-  const last = abs % 10;
-  if (abs > 10 && abs < 20) return forms[2];
-  if (last > 1 && last < 5) return forms[1];
-  if (last === 1) return forms[0];
-  return forms[2];
 }
 
 export function truncate(s: string, max: number): string {

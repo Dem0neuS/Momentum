@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { MotionConfig, motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Header } from '@/components/Header';
@@ -23,8 +23,15 @@ import type { SectionId } from '@/components/navigation';
 import { DashboardPage } from '@/pages/Dashboard';
 import { HabitsPage } from '@/pages/Habits';
 import { WorkoutsPage } from '@/pages/Workouts';
-import { SheetsPage } from '@/pages/Sheets';
 import { DayPlanPage } from '@/pages/DayPlan';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { BootError } from '@/components/BootError';
+
+// «Таблицы» тянут HyperFormula (~100 КБ gzip) и @tanstack/react-table.
+// Загружаем раздел по требованию, чтобы первый экран не платил за формулы.
+const SheetsPage = lazy(() =>
+  import('@/pages/Sheets').then((m) => ({ default: m.SheetsPage })),
+);
 
 function isEditableTarget(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
@@ -39,6 +46,7 @@ export default function App() {
   const [section, setSection] = useState<SectionId>(() => sectionFromLocation(window.location.search) ?? 'dashboard');
   const [splash, setSplash] = useState(true);
   const [ready, setReady] = useState(false);
+  const [bootError, setBootError] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const remindAt = useMemo(() => {
@@ -54,12 +62,17 @@ export default function App() {
     (async () => {
       // Хуки ставятся до сидинга: иначе стартовые привычки остались бы
       // без метки и в облако бы не уехали.
-      installSyncHooks();
-      await initApp();
-      if (!alive) return;
-      setReady(true);
-      // если день ещё не начат — проверить смену дня после загрузки
-      useHabitsStore.getState().recheckStreaksOnDayChange();
+      try {
+        installSyncHooks();
+        await initApp();
+        if (!alive) return;
+        setReady(true);
+        // если день ещё не начат — проверить смену дня после загрузки
+        useHabitsStore.getState().recheckStreaksOnDayChange();
+      } catch (e) {
+        console.error(e);
+        if (alive) setBootError(e instanceof Error ? e.message : String(e));
+      }
     })();
     const timer = setTimeout(
       () => alive && setSplash(false),
@@ -95,7 +108,7 @@ export default function App() {
       });
     }
     void now;
-  }, [now, nowKey, ready, remindAt]);
+  }, [now, nowKey, ready, remindAt, dayRef, remindedRef]);
 
   // Раздел в адресной строке ↔ состояние навигации
   useEffect(() => {
@@ -142,6 +155,9 @@ export default function App() {
   // Тост «Обновление готово» с кнопкой «Обновить» (только десктопная версия).
   useUpdateToast();
 
+  // Хранилище не открылось: пустой экран ничего не объясняет.
+  if (bootError) return <BootError message={bootError} />;
+
   const content = getSectionView(section, (s) => setSection(s));
 
   return (
@@ -163,7 +179,15 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              {content}
+              <ErrorBoundary>
+                <Suspense
+                  fallback={
+                    <p className="py-16 text-center text-sm text-muted-foreground">Загрузка раздела…</p>
+                  }
+                >
+                  {content}
+                </Suspense>
+              </ErrorBoundary>
             </motion.div>
           </main>
         </div>

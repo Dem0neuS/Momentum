@@ -29,8 +29,8 @@ import { useWorkoutsStore } from '@/store/workoutsStore';
 import { useAuthStore } from '@/store/authStore';
 import { collectAllData } from '@/db/db';
 import { replaceLocalData, resetLocalData } from '@/sync/engine';
-import type { AllData } from '@/lib/types';
 import { downloadJson, readJsonFile } from '@/lib/utils';
+import { validateBackup } from '@/lib/backup';
 import { todayKey } from '@/lib/dates';
 import { reloadAll, initApp } from '@/lib/boot';
 import { computeMetrics, formatBytes, initialsOf, storageUsed } from '@/lib/metrics';
@@ -113,14 +113,14 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
   const importData = async (file: File) => {
     setImporting(true);
     try {
-      const data = await readJsonFile<Record<string, unknown>>(file);
-      if (!data || typeof data !== 'object' || (!('habits' in data) && !('sheets' in data))) {
-        toast.error('Не удалось распознать файл бэкапа');
+      const parsed = validateBackup(await readJsonFile<unknown>(file));
+      if (!parsed.ok) {
+        toast.error(parsed.error);
         return;
       }
       // Импорт заменяет базу целиком, поэтому идёт через движок: он достроит
       // журнал удалений и метки, иначе изменения не дошли бы до облака.
-      await replaceLocalData(data as unknown as AllData);
+      await replaceLocalData(parsed.data);
       useHistoryStore.getState().clear();
       await reloadAll();
       toast('Данные импортированы');
@@ -136,6 +136,9 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
     await resetLocalData();
     useHistoryStore.getState().clear();
     await initApp();
+    // initApp на старте намеренно не грузит таблицы (HyperFormula), но после
+    // сброса стор таблиц мог остаться с прежними данными — обновляем его.
+    await reloadAll();
     // Диалог остаётся открытым, поэтому размер хранилища надо перемерить:
     // иначе в шапке осталось бы число от удалённых данных.
     void storageUsed().then(setBytes);

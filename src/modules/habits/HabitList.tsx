@@ -13,7 +13,6 @@ import {
 import { createDndAnnouncements, dndScreenReaderInstructions } from '@/lib/dndA11y';
 import type { Habit } from '@/lib/types';
 import { useHabitsStore } from '@/store/habitsStore';
-import { useSettingsStore } from '@/store/settingsStore';
 import { CategorySection, UncategorizedSection } from './CategoryTree';
 
 const NONE_CONTAINER = 'cat:_none';

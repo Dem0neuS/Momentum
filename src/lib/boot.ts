@@ -3,7 +3,6 @@ import { seedIfNeeded } from '@/db/seed';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useWorkoutsStore } from '@/store/workoutsStore';
-import { useSheetsStore } from '@/store/sheetsStore';
 import { useDayPlanStore } from '@/store/dayPlanStore';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
 
@@ -18,7 +17,9 @@ export async function initApp(): Promise<void> {
   if (!appInitPromise) {
     appInitPromise = (async () => {
       await seedIfNeeded();
-      await reloadAll();
+      // Таблицы не грузим на старте: их стор тянет HyperFormula. Раздел
+      // «Таблицы» загружается по требованию и сам вызовет load().
+      await reloadAll({ sheets: false });
     })().finally(() => {
       appInitPromise = null;
     });
@@ -27,7 +28,7 @@ export async function initApp(): Promise<void> {
 }
 
 /** Полная перезагрузка данных из IndexedDB во все сторы */
-export async function reloadAll(): Promise<void> {
+export async function reloadAll(opts: { sheets?: boolean } = {}): Promise<void> {
   const data = await loadAllData();
   useSettingsStore.getState().load(data.settings ?? DEFAULT_SETTINGS);
   useHabitsStore.getState().load({
@@ -42,6 +43,11 @@ export async function reloadAll(): Promise<void> {
     exercises: data.exercises,
     workoutTemplates: data.workoutTemplates,
   });
-  await useSheetsStore.getState().load({ sheets: data.sheets, cells: data.cells });
+  // Динамический импорт: на старте (sheets: false) чанк с формулами
+  // не запрашивается вовсе. При импорте бэкапа и синхронизации — грузим.
+  if (opts.sheets !== false) {
+    const { useSheetsStore } = await import('@/store/sheetsStore');
+    await useSheetsStore.getState().load({ sheets: data.sheets, cells: data.cells });
+  }
   await useDayPlanStore.getState().load({ dayPlans: data.dayPlans, dayPlanItems: data.dayPlanItems });
 }

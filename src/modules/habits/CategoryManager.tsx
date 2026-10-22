@@ -179,7 +179,7 @@ function SubcategoryAdd({
   onAdd: (input: { categoryId: string; name: string; icon: string; color: string }) => void;
 }) {
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('🏷️');
+  const icon = '🏷️';
   const add = () => {
     if (!name.trim()) return;
     onAdd({ categoryId, name: name.trim(), icon, color: '#7A8398' });
