@@ -383,6 +383,12 @@ export async function resetLocalData(): Promise<void> {
 export async function chooseUpload(): Promise<void> {
   const userId = useSyncStore.getState().userId;
   if (!userId) return;
+  // Устройство было под другим аккаунтом: его удаления к этому аккаунту не
+  // относятся. Без очистки журнала они вычистили бы из облака одноимённые
+  // записи — например, удалённая здесь настройка удалила бы настройку нового
+  // аккаунта. При обычной отправке журнал, наоборот, нужен: локальные удаления
+  // должны доехать до облака.
+  if (getOwner() !== userId) clearTombstones();
   setOwner(userId);
   resetFor(userId);
   await restampEverything();
@@ -515,7 +521,7 @@ async function cycle(): Promise<void> {
 
   // Кто владеет данными на устройстве. Пока владелец неизвестен или чужой,
   // обычный обмен не запускается: иначе устройство либо затерло бы чужие
-  // данные, либо молча слило бы два аккаунта в один.
+  // данные, либо молча слило бы два аккаунта в один. Решение принимает человек.
   const owner = getOwner();
   if (owner !== userId) {
     if (await isLocalEmpty()) {
@@ -523,7 +529,7 @@ async function cycle(): Promise<void> {
       setOwner(userId);
       resetFor(userId);
     } else if (owner) {
-      store.askChoice('account', false);
+      store.askChoice('account');
       return;
     } else {
       let cloudEmpty: boolean;
@@ -538,7 +544,7 @@ async function cycle(): Promise<void> {
         setOwner(userId);
         resetFor(userId);
       } else {
-        store.askChoice('merge', true);
+        store.askChoice('merge');
         return;
       }
     }
