@@ -80,41 +80,167 @@ async function statFile(file) {
   }
 }
 
-function startServer() {
-  // Порт по умолчанию случайный, но его можно зафиксировать — так проще
-  // проверять сборку и подключать внешние инструменты.
-  const port = Number(process.env.MOMENTUM_PORT) || 0;
-  return new Promise((resolve) => {
-    const server = http.createServer(async (req, res) => {
-      if (!req.url) {
-        res.writeHead(400).end();
-        return;
-      }
-      const requested = resolveAsset(req.url);
-      if (!requested) {
-        res.writeHead(403).end();
-        return;
-      }
-      let file = requested;
-      let stats = await statFile(file);
+/**
+ * Порт — часть origin, а origin определяет, где лежат данные (IndexedDB и
+ * localStorage). Пока порт выбирался случайно при каждом запуске
+ * (`listen(0)`), каждая новая сессия открывала пустую базу: данные прошлого
+ * запуска оставались в origin со старым портом и становились недоступны.
+ *
+ * Поэтому порт выбирается один раз и запоминается в userData. Сменить его
+ * можно только вручную через MOMENTUM_PORT (отладка).
+ */
+const portFile = () => path.join(app.getPath('userData'), 'server-port.json');
+
+function readSavedPort() {
+  try {
+    const port = Number(JSON.parse(fs.readFileSync(portFile(), 'utf8'))?.port);
+    return Number.isInteger(port) && port > 1024 && port < 65536 ? port : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function savePort(port) {
+  try {
+    fs.writeFileSync(portFile(), JSON.stringify({ port }), 'utf8');
+  } catch {
+    /* не смогли запомнить порт — данные текущей сессии всё равно на месте */
+  }
+}
+
+/**
+ * Порт последней сессии до этого исправления. Нужен ровно один раз: при
+ * первом запуске новой версии, чтобы база прошлого запуска не осталась
+ * в осиротевшем origin. Дальше порт берётся из server-port.json.
+ */
+function lastOriginPort() {
+  try {
+    const root = path.join(app.getPath('userData'), 'IndexedDB');
+    const found = fs
+      .readdirSync(root, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => {
+        const match = /^http_127\.0\.0\.1_(\d+)\.indexeddb\.leveldb$/.exec(entry.name);
+        if (!match) return null;
+        const port = Number(match[1]);
+        if (!Number.isInteger(port) || port <= 1024 || port >= 65536) return null;
+        const stats = fs.statSync(path.join(root, entry.name));
+        return { port, at: stats.mtimeMs };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.at - a.at);
+    return found[0]?.port ?? 0;
+  } catch {
+    return 0;
+  }
+}
+
+function createServer() {
+  return http.createServer(async (req, res) => {
+    if (!req.url) {
+      res.writeHead(400).end();
+      return;
+    }
+    const requested = resolveAsset(req.url);
+    if (!requested) {
+      res.writeHead(403).end();
+      return;
+    }
+    let file = requested;
+    let stats = await statFile(file);
+    if (!stats) {
+      // SPA-роутинг: любые неизвестные пути отдают index.html
+      file = path.join(DIST, 'index.html');
+      stats = await statFile(file);
       if (!stats) {
-        // SPA-роутинг: любые неизвестные пути отдают index.html
-        file = path.join(DIST, 'index.html');
-        stats = await statFile(file);
-        if (!stats) {
-          res.writeHead(404).end('Сборка не найдена. Выполните npm run build.');
-          return;
-        }
+        res.writeHead(404).end('Сборка не найдена. Выполните npm run build.');
+        return;
       }
-      const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
-      const headers = { 'Content-Type': type, 'Cache-Control': 'no-cache', ...SECURITY_HEADERS };
-      // Service Worker должен иметь корень на /
-      if (path.basename(file) === 'sw.js') headers['Service-Worker-Allowed'] = '/';
-      res.writeHead(200, headers);
-      fs.createReadStream(file).pipe(res);
-    });
-    server.listen(port, '127.0.0.1', () => resolve(server));
+    }
+    const type = MIME[path.extname(file).toLowerCase()] || 'application/octet-stream';
+    const headers = { 'Content-Type': type, 'Cache-Control': 'no-cache', ...SECURITY_HEADERS };
+    // Service Worker должен иметь корень на /
+    if (path.basename(file) === 'sw.js') headers['Service-Worker-Allowed'] = '/';
+    res.writeHead(200, headers);
+    fs.createReadStream(file).pipe(res);
   });
+}
+
+function listenOnce(server, port) {
+  return new Promise((resolve, reject) => {
+    const onError = (error) => {
+      server.removeListener('listening', onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      server.removeListener('error', onError);
+      resolve(server);
+    };
+    server.once('error', onError);
+    server.once('listening', onListening);
+    server.listen(port, '127.0.0.1');
+  });
+}
+
+async function startServer() {
+  const forced = Number(process.env.MOMENTUM_PORT) || 0;
+  if (forced) return listenOnce(createServer(), forced);
+
+  const saved = readSavedPort();
+
+  // Сохранённый порт может быть занят, пока закрывается прошлый экземпляр.
+  // Нескольких попыток хватает; сохранённый порт при этом не трогаем, иначе
+  // вместе с ним «потеряется» и адрес базы данных.
+  for (let attempt = 0; saved && attempt < 5; attempt++) {
+    if (attempt > 0) await new Promise((done) => setTimeout(done, 400));
+    const server = createServer();
+    try {
+      return await listenOnce(server, saved);
+    } catch (error) {
+      server.close();
+      if (error?.code !== 'EADDRINUSE') break;
+    }
+  }
+
+  // Первый запуск новой версии: подхватываем origin последней сессии, чтобы
+  // не потерять уже созданные данные. Если порт занят — выбираем новый.
+  if (!saved) {
+    const previous = lastOriginPort();
+    if (previous) {
+      const server = createServer();
+      try {
+        await listenOnce(server, previous);
+        savePort(previous);
+        return server;
+      } catch {
+        server.close();
+      }
+    }
+  }
+
+  // Первый запуск: берём порт из диапазона ниже эфемерного (Windows выдаёт
+  // 49152+ сторонним программам) и сразу запоминаем его.
+  if (!saved) {
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const candidate = 45000 + Math.floor(Math.random() * 1000);
+      const server = createServer();
+      try {
+        await listenOnce(server, candidate);
+        savePort(candidate);
+        return server;
+      } catch (error) {
+        server.close();
+        if (error?.code !== 'EADDRINUSE') break;
+      }
+    }
+  }
+
+  // Сохранённый порт занят чужим процессом: работаем на случайном, но
+  // сохранённый не перезаписываем — при следующем запуске попробуем снова.
+  const server = createServer();
+  await listenOnce(server, 0);
+  if (!saved) savePort(server.address().port);
+  return server;
 }
 
 /* --- Сохранение размера и позиции окна ---------------------------------- */
