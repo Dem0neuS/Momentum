@@ -2,6 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   AllData,
   AppSettings,
+  CalendarNote,
   Category,
   Cell,
   DayPlan,
@@ -34,10 +35,32 @@ export const SYNC_TABLES = [
   'cells',
   'dayPlans',
   'dayPlanItems',
+  'calendarNotes',
   'settings',
 ] as const;
 
 export type SyncTable = (typeof SYNC_TABLES)[number];
+
+/**
+ * Схема версии 2. Хранится отдельно, потому что апгрейд до неё должен
+ * проставить метки только существующим тогда таблицам: заметки календаря
+ * появляются в версии 3, и `tx.table('calendarNotes')` на этом шаге упал бы.
+ */
+const V2_STORES = {
+  categories: 'id, name, order, updatedAt',
+  subcategories: 'id, categoryId, name, order, updatedAt',
+  habits: 'id, name, categoryId, subcategoryId, archived, createdAt, updatedAt',
+  habitLogs: 'id, habitId, date, status, updatedAt',
+  streaks: 'habitId, current, best, updatedAt',
+  workouts: 'id, date, type, completed, updatedAt',
+  exercises: 'id, workoutId, order, updatedAt',
+  workoutTemplates: 'id, name, updatedAt',
+  sheets: 'id, name, updatedAt',
+  cells: 'id, sheetId, row, col, updatedAt',
+  dayPlans: 'id, date, updatedAt',
+  dayPlanItems: 'id, planId, blockType, order, updatedAt',
+  settings: 'key, updatedAt',
+} as const;
 
 export class MomentumDB extends Dexie {
   categories!: Table<Category, string>;
@@ -52,6 +75,7 @@ export class MomentumDB extends Dexie {
   cells!: Table<Cell, string>;
   dayPlans!: Table<DayPlan, string>;
   dayPlanItems!: Table<DayPlanItem, string>;
+  calendarNotes!: Table<CalendarNote, string>;
   settings!: Table<{ key: string; value: unknown; updatedAt?: string }, string>;
 
   constructor() {
@@ -77,29 +101,22 @@ export class MomentumDB extends Dexie {
     // отправки строки, и проставление меток уже существующим записям.
     // Без меток они бы выглядели как никогда не менявшиеся и в облако не уехали.
     this.version(2)
-      .stores({
-        categories: 'id, name, order, updatedAt',
-        subcategories: 'id, categoryId, name, order, updatedAt',
-        habits: 'id, name, categoryId, subcategoryId, archived, createdAt, updatedAt',
-        habitLogs: 'id, habitId, date, status, updatedAt',
-        streaks: 'habitId, current, best, updatedAt',
-        workouts: 'id, date, type, completed, updatedAt',
-        exercises: 'id, workoutId, order, updatedAt',
-        workoutTemplates: 'id, name, updatedAt',
-        sheets: 'id, name, updatedAt',
-        cells: 'id, sheetId, row, col, updatedAt',
-        dayPlans: 'id, date, updatedAt',
-        dayPlanItems: 'id, planId, blockType, order, updatedAt',
-        settings: 'key, updatedAt',
-      })
+      .stores(V2_STORES)
       .upgrade(async (tx) => {
         const stamp = new Date().toISOString();
-        for (const name of SYNC_TABLES) {
+        for (const name of Object.keys(V2_STORES)) {
           await tx.table(name).toCollection().modify((obj: Record<string, unknown>) => {
             obj.updatedAt = stamp;
           });
         }
       });
+
+    // Версия 3 добавляет заметки календаря. Отдельная таблица, потому что
+    // заметок на день бывает несколько. Остальные таблицы наследуются из
+    // версии 2: Dexie сохраняет описанную ранее схему, если её не повторять.
+    this.version(3).stores({
+      calendarNotes: 'id, date, updatedAt',
+    });
   }
 }
 
@@ -119,9 +136,10 @@ export async function loadAllData(): Promise<{
   cells: Cell[];
   dayPlans: DayPlan[];
   dayPlanItems: DayPlanItem[];
+  calendarNotes: CalendarNote[];
   settings: AppSettings;
 }> {
-  const [categories, subcategories, habits, habitLogs, streaks, workouts, exercises, workoutTemplates, sheets, cells, dayPlans, dayPlanItems, settingsRows] =
+  const [categories, subcategories, habits, habitLogs, streaks, workouts, exercises, workoutTemplates, sheets, cells, dayPlans, dayPlanItems, calendarNotes, settingsRows] =
     await Promise.all([
       db.categories.toArray(),
       db.subcategories.toArray(),
@@ -135,6 +153,7 @@ export async function loadAllData(): Promise<{
       db.cells.toArray(),
       db.dayPlans.toArray(),
       db.dayPlanItems.toArray(),
+      db.calendarNotes.toArray(),
       db.settings.toArray(),
     ]);
 
@@ -155,6 +174,7 @@ export async function loadAllData(): Promise<{
     cells,
     dayPlans,
     dayPlanItems,
+    calendarNotes,
     settings,
   };
 }
@@ -170,7 +190,7 @@ export async function replaceAllData(data: AllData): Promise<void> {
     [
       db.categories, db.subcategories, db.habits, db.habitLogs, db.streaks,
       db.workouts, db.exercises, db.workoutTemplates, db.sheets, db.cells,
-      db.dayPlans, db.dayPlanItems, db.settings,
+      db.dayPlans, db.dayPlanItems, db.calendarNotes, db.settings,
     ],
     async () => {
       await Promise.all([
@@ -186,6 +206,7 @@ export async function replaceAllData(data: AllData): Promise<void> {
         db.cells.clear(),
         db.dayPlans.clear(),
         db.dayPlanItems.clear(),
+        db.calendarNotes.clear(),
         db.settings.clear(),
       ]);
       await db.categories.bulkPut(data.categories ?? []);
@@ -200,6 +221,8 @@ export async function replaceAllData(data: AllData): Promise<void> {
       await db.cells.bulkPut(data.cells ?? []);
       await db.dayPlans.bulkPut(data.dayPlans ?? []);
       await db.dayPlanItems.bulkPut(data.dayPlanItems ?? []);
+      // Старые бэкапы не содержат заметок календаря — это не повод падать.
+      await db.calendarNotes.bulkPut(data.calendarNotes ?? []);
       if (data.settings) await saveSettings(data.settings);
     },
   );
@@ -210,7 +233,7 @@ export async function clearAllData(): Promise<void> {
 }
 
 export async function collectAllData(settings: AppSettings): Promise<AllData> {
-  const [categories, subcategories, habits, habitLogs, streaks, workouts, exercises, workoutTemplates, sheets, cells, dayPlans, dayPlanItems] =
+  const [categories, subcategories, habits, habitLogs, streaks, workouts, exercises, workoutTemplates, sheets, cells, dayPlans, dayPlanItems, calendarNotes] =
     await Promise.all([
       db.categories.toArray(),
       db.subcategories.toArray(),
@@ -224,6 +247,7 @@ export async function collectAllData(settings: AppSettings): Promise<AllData> {
       db.cells.toArray(),
       db.dayPlans.toArray(),
       db.dayPlanItems.toArray(),
+      db.calendarNotes.toArray(),
     ]);
   return {
     version: 1,
@@ -240,6 +264,7 @@ export async function collectAllData(settings: AppSettings): Promise<AllData> {
     cells,
     dayPlans,
     dayPlanItems,
+    calendarNotes,
     settings,
   };
 }

@@ -7,6 +7,7 @@ describe('deepLink: sectionFromLocation', () => {
     expect(sectionFromLocation('?section=workouts')).toBe('workouts');
     expect(sectionFromLocation('?section=sheets')).toBe('sheets');
     expect(sectionFromLocation('?section=dayplan')).toBe('dayplan');
+    expect(sectionFromLocation('?section=calendar')).toBe('calendar');
     expect(sectionFromLocation('?section=dashboard')).toBe('dashboard');
   });
 

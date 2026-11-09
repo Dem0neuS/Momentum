@@ -54,6 +54,17 @@ export function validateBackup(value: unknown): BackupCheck {
   if (!isRecord(value.settings)) {
     return { ok: false, error: 'Повреждённый бэкап: нет настроек' };
   }
+  if ('calendarNotes' in value && !Array.isArray(value.calendarNotes)) {
+    return { ok: false, error: 'Повреждённый бэкап: раздел данных имеет неверный формат' };
+  }
 
-  return { ok: true, data: value as unknown as AllData };
+  // Заметки календаря появились позже остальных разделов. Старый бэкап без
+  // них — не потеря данных, а «заметок тогда не было»: подставляем пустой
+  // список, иначе валидация отвергла бы все прежние файлы.
+  const data = {
+    ...value,
+    calendarNotes: Array.isArray(value.calendarNotes) ? value.calendarNotes : [],
+  };
+
+  return { ok: true, data: data as unknown as AllData };
 }

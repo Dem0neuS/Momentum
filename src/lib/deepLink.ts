@@ -1,6 +1,6 @@
 import type { SectionId } from '@/components/navigation';
 
-const SECTIONS: SectionId[] = ['dashboard', 'habits', 'workouts', 'sheets', 'dayplan'];
+const SECTIONS: SectionId[] = ['dashboard', 'habits', 'workouts', 'sheets', 'dayplan', 'calendar'];
 
 /**
  * Адрес, который мы сами записали последним вызовом rememberSection.

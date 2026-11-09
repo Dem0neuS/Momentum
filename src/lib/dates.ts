@@ -60,6 +60,18 @@ export function monthRange(d: Date): { start: Date; end: Date } {
   return { start: startOfMonth(d), end: endOfMonth(d) };
 }
 
+/**
+ * Дни сетки месяца: с понедельника первой недели по воскресенье последней.
+ * Края дополнены днями соседних месяцев — иначе первая и последняя недели
+ * были бы обрезаны и сетка «прыгала» бы по высоте.
+ */
+export function monthGrid(d: Date): Date[] {
+  return eachDayOfInterval({
+    start: startOfWeek(startOfMonth(d)),
+    end: addDays(startOfWeek(endOfMonth(d)), 6),
+  });
+}
+
 export { startOfMonth, endOfMonth } from 'date-fns';
 
 export function dayOfYear(d: Date): number {

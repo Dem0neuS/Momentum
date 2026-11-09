@@ -77,4 +77,26 @@ describe('validateBackup', () => {
   it('не мешает лишним ключам', () => {
     expect(validateBackup(fullBackup({ futureField: 42 })).ok).toBe(true);
   });
+
+  it('принимает старый бэкап без заметок календаря и подставляет пустой список', () => {
+    const result = validateBackup(fullBackup());
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.calendarNotes).toEqual([]);
+  });
+
+  it('сохраняет заметки календаря из нового бэкапа', () => {
+    const note = {
+      id: 'note-1',
+      date: '2026-11-09',
+      text: 'Позвонить в сервис',
+      createdAt: '2026-11-09T10:00:00.000Z',
+    };
+    const result = validateBackup(fullBackup({ calendarNotes: [note] }));
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.calendarNotes).toEqual([note]);
+  });
+
+  it('отклоняет заметки календаря неверного типа', () => {
+    expect(validateBackup(fullBackup({ calendarNotes: 'nope' })).ok).toBe(false);
+  });
 });

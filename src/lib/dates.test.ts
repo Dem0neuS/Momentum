@@ -10,6 +10,7 @@ import {
   lastNDayKeys,
   isoSameDay,
   monthRange,
+  monthGrid,
   dayOfYear,
   isoWeekday,
   nextNDaysFromToday,
@@ -83,6 +84,20 @@ describe('dates: ключи дней', () => {
     const { start, end } = monthRange(new Date(2026, 1, 15));
     expect(dayKey(start)).toBe('2026-02-01');
     expect(dayKey(end)).toBe('2026-02-28');
+  });
+
+  it('monthGrid покрывает месяц полными неделями Пн–Вс', () => {
+    const grid = monthGrid(new Date(2026, 10, 15)); // ноябрь 2026
+    expect(grid).toHaveLength(42);
+    expect(dayKey(grid[0])).toBe('2026-10-26');
+    expect(dayKey(grid[41])).toBe('2026-12-06');
+    expect(isoWeekday(grid[0])).toBe(1);
+    expect(isoWeekday(grid[41])).toBe(7);
+
+    const february = monthGrid(new Date(2026, 1, 15)); // февраль 2026 начинается в воскресенье
+    expect(february).toHaveLength(35);
+    expect(dayKey(february[0])).toBe('2026-01-26');
+    expect(dayKey(february[34])).toBe('2026-03-01');
   });
 
   it('dayOfYear считает от начала года', () => {

@@ -24,6 +24,7 @@ import { DashboardPage } from '@/pages/Dashboard';
 import { HabitsPage } from '@/pages/Habits';
 import { WorkoutsPage } from '@/pages/Workouts';
 import { DayPlanPage } from '@/pages/DayPlan';
+import { CalendarPage } from '@/pages/Calendar';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { BootError } from '@/components/BootError';
 
@@ -213,6 +214,8 @@ function getSectionView(section: SectionId, navigate: (s: SectionId) => void): R
       return <SheetsPage />;
     case 'dayplan':
       return <DayPlanPage />;
+    case 'calendar':
+      return <CalendarPage onNavigate={navigate} />;
     default:
       return null;
   }

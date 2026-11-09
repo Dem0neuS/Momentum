@@ -162,6 +162,19 @@ export interface BlockSettings {
   smallDefaultCount: number;
 }
 
+// ---------- Календарь ----------
+/**
+ * Заметка календаря. Заметок на день может быть несколько, поэтому это
+ * отдельная таблица, а не поле `notes` у плана: план на дату один, а заметок
+ * нужно сколько угодно, и они не обязаны быть связаны с планом.
+ */
+export interface CalendarNote {
+  id: ID;
+  date: string; // yyyy-MM-dd
+  text: string;
+  createdAt: string; // ISO
+}
+
 // ---------- Настройки ----------
 export interface SkipPolicy {
   maxConsecutiveSkips: number;
@@ -212,5 +225,6 @@ export interface AllData {
   cells: Cell[];
   dayPlans: DayPlan[];
   dayPlanItems: DayPlanItem[];
+  calendarNotes: CalendarNote[];
   settings: AppSettings;
 }

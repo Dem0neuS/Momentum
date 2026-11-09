@@ -4,6 +4,7 @@ import { useSettingsStore } from '@/store/settingsStore';
 import { useHabitsStore } from '@/store/habitsStore';
 import { useWorkoutsStore } from '@/store/workoutsStore';
 import { useDayPlanStore } from '@/store/dayPlanStore';
+import { useCalendarStore } from '@/store/calendarStore';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
 
 /**
@@ -50,4 +51,5 @@ export async function reloadAll(opts: { sheets?: boolean } = {}): Promise<void> 
     await useSheetsStore.getState().load({ sheets: data.sheets, cells: data.cells });
   }
   await useDayPlanStore.getState().load({ dayPlans: data.dayPlans, dayPlanItems: data.dayPlanItems });
+  await useCalendarStore.getState().load(data.calendarNotes);
 }
