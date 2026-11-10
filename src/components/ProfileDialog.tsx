@@ -22,6 +22,7 @@ import { AccountCard, ChangePasswordCard, RecoveryCard } from './AccountCard';
 import { SyncCard } from './SyncCard';
 import { InstallAppCard } from './InstallAppCard';
 import { UpdateAppCard } from './UpdateAppCard';
+import { OldDataCard } from './OldDataCard';
 import { useSettingsStore } from '@/store/settingsStore';
 import { useHistoryStore } from '@/store/historyStore';
 import { useHabitsStore } from '@/store/habitsStore';
@@ -414,6 +415,7 @@ export function ProfileDialog({ open, onClose }: { open: boolean; onClose: () =>
                   e.target.value = '';
                 }}
               />
+              <OldDataCard />
               <InstallAppCard />
             </section>
           )}

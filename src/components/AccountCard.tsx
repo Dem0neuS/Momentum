@@ -18,8 +18,11 @@ export function AccountCard() {
   const user = useAuthStore((s) => s.user);
   const busy = useAuthStore((s) => s.busy);
   const error = useAuthStore((s) => s.error);
+  const notice = useAuthStore((s) => s.notice);
+  const pendingEmail = useAuthStore((s) => s.pendingEmail);
   const signIn = useAuthStore((s) => s.signIn);
   const signUp = useAuthStore((s) => s.signUp);
+  const resendConfirmation = useAuthStore((s) => s.resendConfirmation);
   const signOut = useAuthStore((s) => s.signOut);
   const clearError = useAuthStore((s) => s.clearError);
 
@@ -58,9 +61,6 @@ export function AccountCard() {
 
   const submit = async () => {
     const ok = mode === 'signin' ? await signIn(email, password) : await signUp(email, password);
-    if (ok && mode === 'signup') {
-      toast('Проверьте почту: нужно подтвердить адрес по ссылке из письма');
-    }
     if (ok) setPassword('');
   };
 
@@ -111,6 +111,26 @@ export function AccountCard() {
       </Field>
 
       {error && <p className="text-xs text-destructive-ink">{error}</p>}
+      {notice && !error && (
+        <p className="rounded-lg bg-done-soft px-3 py-2 text-xs text-done-ink">{notice}</p>
+      )}
+
+      {pendingEmail && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 px-3 py-2">
+          <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Письмо для подтверждения отправлено на {pendingEmail}.
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busy !== null}
+            onClick={() => void resendConfirmation()}
+          >
+            <Mail className="h-4 w-4" />
+            {busy === 'resend' ? 'Отправляем…' : 'Отправить ещё раз'}
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button
@@ -118,7 +138,11 @@ export function AccountCard() {
           disabled={busy !== null || !email || !password}
           onClick={() => void submit()}
         >
-          {busy ? 'Отправляем…' : mode === 'signin' ? 'Войти' : 'Создать аккаунт'}
+          {busy === 'signin' || busy === 'signup'
+            ? 'Отправляем…'
+            : mode === 'signin'
+              ? 'Войти'
+              : 'Создать аккаунт'}
         </Button>
         <ForgotPasswordLink />
       </div>

@@ -109,14 +109,14 @@ function savePort(port) {
 }
 
 /**
- * Порт последней сессии до этого исправления. Нужен ровно один раз: при
- * первом запуске новой версии, чтобы база прошлого запуска не осталась
- * в осиротевшем origin. Дальше порт берётся из server-port.json.
+ * Все origin, под которыми когда-либо работало приложение. До исправления
+ * порт выбирался случайно при каждом запуске, и каждая сессия оставляла базу
+ * в отдельном origin. Список нужен восстановлению старых данных.
  */
-function lastOriginPort() {
+function listOriginPorts() {
   try {
     const root = path.join(app.getPath('userData'), 'IndexedDB');
-    const found = fs
+    return fs
       .readdirSync(root, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => {
@@ -129,10 +129,18 @@ function lastOriginPort() {
       })
       .filter(Boolean)
       .sort((a, b) => b.at - a.at);
-    return found[0]?.port ?? 0;
   } catch {
-    return 0;
+    return [];
   }
+}
+
+/**
+ * Порт последней сессии до этого исправления. Нужен ровно один раз: при
+ * первом запуске новой версии, чтобы база прошлого запуска не осталась
+ * в осиротевшем origin. Дальше порт берётся из server-port.json.
+ */
+function lastOriginPort() {
+  return listOriginPorts()[0]?.port ?? 0;
 }
 
 function createServer() {
@@ -241,6 +249,150 @@ async function startServer() {
   await listenOnce(server, 0);
   if (!saved) savePort(server.address().port);
   return server;
+}
+
+/* --- Восстановление данных из прошлых origin ---------------------------- */
+
+/**
+ * Старая копия уже не открывается приложением: мы поднимаем на её порту
+ * крошечный сервер и читаем IndexedDB из скрытого окна. Origin (схема, хост
+ * и порт) должен совпасть байт в байт — иначе Chromium откроет другую базу.
+ */
+const RECOVERY_HTML = '<!doctype html><meta charset="utf-8"><title>Momentum</title>';
+
+const RECOVERY_READER = `(async () => {
+  const names = typeof indexedDB.databases === 'function' ? await indexedDB.databases() : null;
+  if (names && !names.some((d) => d.name === 'momentum')) {
+    return JSON.stringify({ exists: false, version: 0, tables: {} });
+  }
+  const db = await new Promise((resolve, reject) => {
+    const req = indexedDB.open('momentum');
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('blocked'));
+  });
+  const version = db.version;
+  const tables = {};
+  for (const name of Array.from(db.objectStoreNames)) {
+    tables[name] = await new Promise((resolve, reject) => {
+      const tx = db.transaction(name, 'readonly');
+      const req = tx.objectStore(name).getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  db.close();
+  return JSON.stringify({ exists: true, version, tables });
+})()`;
+
+function recoveryServer() {
+  return http.createServer((_req, res) => {
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, max-age=0',
+      'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+      'X-Content-Type-Options': 'nosniff',
+    });
+    res.end(RECOVERY_HTML);
+  });
+}
+
+/** Прочитать одну базу по порту её origin. Только чтение. */
+async function readOldOrigin(port) {
+  const temp = recoveryServer();
+  try {
+    await listenOnce(temp, port);
+  } catch (error) {
+    temp.close();
+    return {
+      port,
+      error:
+        error?.code === 'EADDRINUSE'
+          ? 'Порт занят другой программой'
+          : 'Не удалось открыть старую копию',
+    };
+  }
+
+  let win = null;
+  try {
+    // Старый Service Worker мог бы отдать закэшированное приложение вместо
+    // пустой страницы — и оно бы открыло базу и, возможно, изменило её.
+    // Снимаем только регистрацию worker'а для этого origin; IndexedDB цел.
+    await session.defaultSession.clearStorageData({
+      origin: `http://127.0.0.1:${port}`,
+      storages: ['serviceworkers'],
+    });
+
+    win = new BrowserWindow({
+      show: false,
+      width: 360,
+      height: 240,
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+        spellcheck: false,
+        backgroundThrottling: false,
+      },
+    });
+    win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    let loaded = false;
+    win.webContents.on('will-navigate', (event) => {
+      if (loaded) event.preventDefault();
+    });
+
+    await win.loadURL(`http://127.0.0.1:${port}/__momentum_recovery__?t=${Date.now()}`);
+    loaded = true;
+
+    const raw = await Promise.race([
+      win.webContents.executeJavaScript(RECOVERY_READER, true),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000)),
+    ]);
+    const payload = JSON.parse(String(raw));
+    const tables = payload?.tables && typeof payload.tables === 'object' ? payload.tables : {};
+    const counts = {};
+    let total = 0;
+    for (const [name, rows] of Object.entries(tables)) {
+      if (!Array.isArray(rows)) continue;
+      counts[name] = rows.length;
+      if (name !== 'settings') total += rows.length;
+    }
+    const settingsRows = Array.isArray(tables.settings) ? tables.settings : [];
+    const settings = settingsRows.find((row) => row && row.key === 'app')?.value ?? null;
+
+    return {
+      port,
+      version: Number(payload?.version) || 0,
+      tables,
+      counts,
+      total,
+      settings,
+    };
+  } catch (error) {
+    return {
+      port,
+      error:
+        error?.message === 'timeout'
+          ? 'Старая копия не ответила'
+          : 'Не удалось прочитать старую копию',
+    };
+  } finally {
+    if (win && !win.isDestroyed()) win.destroy();
+    temp.close();
+    temp.closeAllConnections?.();
+  }
+}
+
+/** Проверить все старые origin, кроме текущего. */
+async function scanOldOrigins() {
+  const currentPort = server?.address()?.port ?? 0;
+  const origins = [];
+  for (const item of listOriginPorts()) {
+    if (item.port === currentPort) continue;
+    const read = await readOldOrigin(item.port);
+    origins.push({ ...item, ...read });
+  }
+  return { currentPort, origins };
 }
 
 /* --- Сохранение размера и позиции окна ---------------------------------- */
@@ -498,6 +650,30 @@ ipcMain.on('momentum:open-external', (_event, url) => {
 ipcMain.on('momentum:full-screen', (_event, value) => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.setFullScreen(Boolean(value));
+});
+
+function fromMainWindow(event) {
+  return Boolean(mainWindow && !mainWindow.isDestroyed() && event.sender === mainWindow.webContents);
+}
+
+ipcMain.handle('momentum:old-data-scan', async (event) => {
+  if (!fromMainWindow(event)) return { currentPort: 0, origins: [] };
+  return scanOldOrigins();
+});
+
+ipcMain.handle('momentum:old-data-read', async (event, port) => {
+  const value = Number(port);
+  if (!fromMainWindow(event)) return { port: value, error: 'Нет доступа' };
+  if (!Number.isInteger(value) || value <= 1024 || value >= 65536) {
+    return { port: value, error: 'Неверный порт' };
+  }
+  if (server?.address()?.port === value) {
+    return { port: value, error: 'Это текущие данные' };
+  }
+  if (!listOriginPorts().some((item) => item.port === value)) {
+    return { port: value, error: 'Старая копия не найдена' };
+  }
+  return readOldOrigin(value);
 });
 
 /* --- Автообновление -------------------------------------------------------

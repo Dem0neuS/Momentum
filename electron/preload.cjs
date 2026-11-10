@@ -20,6 +20,10 @@ contextBridge.exposeInMainWorld('momentumDesktop', {
   openExternal: (url) => ipcRenderer.send('momentum:open-external', String(url)),
   /** Свернуть/развернуть окно — на случай, если понадобится полноэкранный режим. */
   setFullScreen: (value) => ipcRenderer.send('momentum:full-screen', Boolean(value)),
+  /** Найти базы прошлых запусков: до 1.0.7 порт менялся при каждом старте. */
+  scanOldData: () => ipcRenderer.invoke('momentum:old-data-scan'),
+  /** Прочитать одну старую базу по порту её origin. */
+  readOldData: (port) => ipcRenderer.invoke('momentum:old-data-read', Number(port)),
   /** Проверить обновление: скачивание начинается само, сеть не блокирует UI. */
   checkUpdate: () => ipcRenderer.invoke('momentum:update-check'),
   /**

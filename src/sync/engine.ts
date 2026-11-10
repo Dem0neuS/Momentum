@@ -16,7 +16,9 @@ import {
   getOwner,
   getPushedStamp,
   listTombstones,
+  nextStampMs,
   normalizeStamp,
+  noteLocalChange,
   onLocalChange,
   setAppliedAt,
   setCursor,
@@ -366,6 +368,47 @@ export async function replaceLocalData(data: AllData): Promise<void> {
     }
   }
   await restampEverything();
+}
+
+/**
+ * Добавить в текущую базу записи, которых в ней нет.
+ *
+ * Используется восстановлением старых копий: текущие данные и настройки
+ * остаются, добавляются только недостающие строки. Строки получают свежую
+ * метку, чтобы уехать в облако; tombstone с тем же ключом снимается — иначе
+ * восстановленная запись считалась бы удалённой и не отправилась бы.
+ */
+export async function mergeLocalData(data: AllData): Promise<number> {
+  const stamp = toIso(nextStampMs());
+  const added: { table: string; id: string }[] = [];
+
+  await withSilent(() =>
+    db.transaction('rw', allTables(), async () => {
+      for (const name of SYNC_TABLES) {
+        // Настройки описывают это устройство и текущий профиль: старые
+        // значения не должны затирать тему, имя и выбранные блоки.
+        if (name === 'settings') continue;
+        const rows = (data as unknown as Record<string, Row[]>)[name];
+        if (!Array.isArray(rows) || rows.length === 0) continue;
+
+        const entries = rows
+          .map((row) => ({ row, id: primaryKeyOf(name, row) }))
+          .filter((entry): entry is { row: Row; id: string } => entry.id !== null);
+        if (entries.length === 0) continue;
+
+        const existing = await db.table(name).bulkGet(entries.map((entry) => entry.id));
+        const missing = entries.filter((_entry, index) => !existing[index]);
+        if (missing.length === 0) continue;
+
+        await db.table(name).bulkPut(missing.map(({ row }) => ({ ...row, updatedAt: stamp })));
+        for (const { id } of missing) added.push({ table: name, id });
+      }
+    }),
+  );
+
+  for (const { table, id } of added) dropTombstone(table, id);
+  if (added.length > 0) noteLocalChange();
+  return added.length;
 }
 
 /** Полный сброс данных. Стартовые привычки создаст вызывающий через initApp. */
