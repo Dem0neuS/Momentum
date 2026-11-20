@@ -180,9 +180,8 @@ npm run qr -- https://<владелец>.github.io/<репозиторий>/
 `v1.0.8` — восстановление старых данных, календарь и кабинет без SMTP (20.11.2026):
 
 - https://github.com/Dem0neuS/Momentum/releases/tag/v1.0.8
-- Файлы: `Momentum-1.0.8-x64-setup.exe`, `Momentum-1.0.8-portable.exe`,
-  `Momentum-1.0.8-x64-setup.exe.blockmap`, `latest.yml` (точные размеры — после
-  публикации релиза).
+- Файлы: `Momentum-1.0.8-x64-setup.exe` (112,3 МБ), `Momentum-1.0.8-portable.exe`
+  (112,1 МБ), `Momentum-1.0.8-x64-setup.exe.blockmap` (116 КБ), `latest.yml`.
 - В Electron на вкладке «Данные» появилась карточка **«Старые данные на
   компьютере»**: поиск осиротевших копий `http://127.0.0.1:<порт>` с прошлых
   запусков, просмотр даты/версии/счётчиков и восстановление в режимах
