@@ -11,6 +11,7 @@
  */
 
 const { app, BrowserWindow, Menu, shell, dialog, session, nativeTheme, ipcMain } = require('electron');
+const { readCsp } = require('./csp.cjs');
 const http = require('node:http');
 const fs = require('node:fs');
 const fsp = require('node:fs/promises');
@@ -24,20 +25,10 @@ const DIST = path.join(__dirname, '..', 'dist');
 // electron-builder собирает сам из этого же файла.
 const ICON = path.join(DIST, 'icons', 'icon-512.png');
 
-// Шрифты грузятся с Google Fonts, скрипты и стили — только свои.
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "font-src 'self' https://fonts.gstatic.com data:",
-  "img-src 'self' data: blob:",
-  "connect-src 'self'",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-].join('; ');
+// CSP берём из собранного index.html: Vite уже добавил туда адрес Supabase.
+// Дублирование политики здесь приводило к тому, что заголовок с connect-src
+// 'self' перекрывал meta и блокировал вход/синхронизацию в .exe.
+const CSP = readCsp(DIST);
 
 const SECURITY_HEADERS = {
   'Content-Security-Policy': CSP,
